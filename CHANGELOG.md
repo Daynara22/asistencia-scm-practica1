@@ -1,5 +1,9 @@
 # Changelog
-## [2.0.0] - 2026-10-15
+## [2.0.1] - 2026-09-10
+### Fixed
+- Manejo de excepciones y validación de tipos nulos para el campo DNI en `registrar_asistencia`.
+
+## [2.0.0] - 2026-09-05
 ### Changed
 - BREAKING: registrar_asistencia ahora recibe un diccionario con metadatos del alumno (dni, materia) en lugar de un string plano.
 
