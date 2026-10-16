@@ -14,7 +14,7 @@ def registrar_asistencia(datos_alumno: dict):
     dni = dni_raw.strip()
     materia = datos_alumno.get("materia", "Programación III")
 
-    if len(dni) >= 7 and dni.isdigit():
+    if len(dni) >= 3 and dni.isdigit():
         total_asistencias += 1
         registro = {"id": total_asistencias, "dni": dni, "materia": materia}
         historial_registros.append(registro)
