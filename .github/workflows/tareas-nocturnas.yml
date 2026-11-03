@@ -1,0 +1,49 @@
+name: "Tareas Nocturnas Automatizadas"
+
+on:
+  # Ejecución programada con sintaxis cron:
+  #   ┌───────────── [minuto]      (0 - 59)  -> 30
+  #   │ ┌─────────── [hora]        (0 - 23)  -> 3
+  #   │ │ ┌───────── [día_mes]     (1 - 31)  -> * (cualquier día del mes)
+  #   │ │ │ ┌─────── [mes]         (1 - 12)  -> * (cualquier mes)
+  #   │ │ │ │ ┌───── [día_semana]  (0 - 6, 0 = domingo) -> 1-5 (lunes a viernes)
+  #   │ │ │ │ │
+  #  '30 3 * * 1-5'  => a las 03:30 de lunes a viernes.
+  # IMPORTANTE: GitHub Actions interpreta el cron en hora UTC
+  # (03:30 UTC = 00:30 en Argentina, UTC-3).
+  schedule:
+    - cron: '30 3 * * 1-5'
+  # Permite ejecutar el workflow manualmente desde la pestaña "Actions"
+  workflow_dispatch:
+
+jobs:
+  nightly-routine:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Paso 1: Descargar el código fuente del repositorio
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      # Paso 2: Configurar la versión de Python en el runner
+      - name: Configurar Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # Paso 3: Actualizar pip e instalar pytest
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      # Paso 4: Simular el respaldo de la base de datos
+      - name: Ejecutar script de respaldos
+        run: |
+          chmod +x ./scripts/db-backup.sh
+          ./scripts/db-backup.sh
+
+      # Paso 5: Ejecutar las pruebas con pytest en modo verbose
+      - name: Ejecutar pruebas de integración
+        run: |
+          pytest -v
