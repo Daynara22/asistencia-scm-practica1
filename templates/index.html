@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block titulo %}Registrar asistencia{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Registrar asistencia</h1>
+    <p class="subtitulo">Hoy {{ fecha_texto }} · <span id="reloj">{{ hora_actual }}</span> hs</p>
+  </div>
+  <div class="chips">
+    <span class="chip">Hora límite: <strong>{{ hora_limite }}</strong></span>
+    {% if cerrado %}
+      <span class="chip chip-cerrado">● Día cerrado</span>
+    {% else %}
+      <span class="chip chip-abierto">● Día abierto</span>
+    {% endif %}
+  </div>
+</section>
+
+<div class="grilla grilla-principal">
+  <!-- Registro por DNI -->
+  <section class="tarjeta tarjeta-destacada">
+    <h2>Ingresá el DNI del alumno</h2>
+    <form method="post" action="{{ url_for('registrar') }}" class="form-dni">
+      <label for="campo-dni" class="oculto">DNI</label>
+      <input id="campo-dni" class="input-dni solo-numeros" name="dni" type="text"
+             inputmode="numeric" maxlength="10" placeholder="Ej: 45123456"
+             autocomplete="off" required {% if cerrado %}disabled{% else %}autofocus{% endif %}>
+      <button class="boton boton-principal boton-grande" type="submit" {% if cerrado %}disabled{% endif %}>
+        Registrar
+      </button>
+    </form>
+
+    {% if cerrado %}
+      <p class="nota">El día ya está cerrado. Para cargar algo de hoy usá la carga manual.</p>
+    {% endif %}
+
+    {% if ultimo %}
+      <div class="resultado resultado-{{ ultimo.estado|lower }}" role="status">
+        <span class="resultado-etiqueta">{{ ultimo.estado }}</span>
+        <p class="resultado-nombre">{{ ultimo.nombre }}</p>
+        <p class="resultado-detalle">DNI {{ ultimo.dni }} · llegó a las {{ ultimo.hora }} hs</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- Resumen del día -->
+  <section class="tarjeta">
+    <h2>Resumen de hoy</h2>
+    <div class="contadores">
+      <div class="contador contador-presente">
+        <span class="contador-numero">{{ resumen.cantidades.PRESENTE }}</span>
+        <span class="contador-texto">Presentes</span>
+      </div>
+      <div class="contador contador-tardanza">
+        <span class="contador-numero">{{ resumen.cantidades.TARDANZA }}</span>
+        <span class="contador-texto">Tardanzas</span>
+      </div>
+      <div class="contador contador-ausente">
+        <span class="contador-numero">{{ resumen.cantidades.AUSENTE }}</span>
+        <span class="contador-texto">Ausentes</span>
+      </div>
+      <div class="contador">
+        <span class="contador-numero">{{ resumen.sin_registrar }}</span>
+        <span class="contador-texto">Sin registrar</span>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('cerrar_dia') }}">
+      <button type="submit" class="boton boton-peligro boton-ancho"
+              data-confirmar="¿Seguro? Tocá de nuevo para cerrar"
+              {% if cerrado %}disabled{% endif %}>
+        {{ 'Día cerrado' if cerrado else 'Cerrar el día' }}
+      </button>
+    </form>
+    <p class="nota">Al cerrar, quienes no se registraron quedan como AUSENTE.</p>
+  </section>
+</div>
+
+<div class="grilla grilla-dos">
+  <!-- Hora límite -->
+  <section class="tarjeta">
+    <h2>Hora límite</h2>
+    <p class="nota">Quien llegue después de esta hora queda con TARDANZA.</p>
+    <form method="post" action="{{ url_for('hora_limite') }}" class="form-linea">
+      <label for="hora-limite" class="oculto">Hora límite</label>
+      <input id="hora-limite" name="hora_limite" type="time" value="{{ hora_limite }}" required>
+      <button type="submit" class="boton boton-secundario">Guardar</button>
+    </form>
+  </section>
+
+  <!-- Carga manual -->
+  <section class="tarjeta">
+    <h2>Carga manual</h2>
+    <p class="nota">Para cargar una tardanza o ausencia de otra fecha.</p>
+    <form method="post" action="{{ url_for('carga_manual') }}" class="form-grilla" id="form-manual">
+      <div class="campo">
+        <label for="manual-dni">DNI</label>
+        <input id="manual-dni" name="dni" type="text" class="solo-numeros" inputmode="numeric"
+               maxlength="10" value="{{ manual.get('dni', '') }}" required>
+      </div>
+      <div class="campo">
+        <label for="manual-fecha">Fecha</label>
+        <input id="manual-fecha" name="fecha" type="date" max="{{ hoy_iso }}"
+               value="{{ manual.get('fecha', '') }}" required>
+      </div>
+      <div class="campo">
+        <label for="manual-estado">Estado</label>
+        <select id="manual-estado" name="estado">
+          <option value="TARDANZA" {% if manual.get('estado') != 'AUSENTE' %}selected{% endif %}>TARDANZA</option>
+          <option value="AUSENTE" {% if manual.get('estado') == 'AUSENTE' %}selected{% endif %}>AUSENTE</option>
+        </select>
+      </div>
+      <div class="campo" id="grupo-hora">
+        <label for="manual-hora">Hora de llegada</label>
+        <input id="manual-hora" name="hora" type="time" value="{{ manual.get('hora', '') }}">
+      </div>
+      <button type="submit" class="boton boton-secundario boton-ancho">Cargar</button>
+    </form>
+  </section>
+</div>
+
+<!-- Registros de hoy -->
+<section class="tarjeta">
+  <h2>Registros de hoy</h2>
+  {% if resumen.registros %}
+    <div class="tabla-contenedor">
+      <table class="tabla">
+        <thead>
+          <tr><th>Hora</th><th>Alumno</th><th>DNI</th><th>Estado</th></tr>
+        </thead>
+        <tbody>
+          {% for r in resumen.registros %}
+            <tr>
+              <td>{{ r.hora or '—' }}</td>
+              <td>{{ r.nombre }}</td>
+              <td>{{ r.dni }}</td>
+              <td><span class="badge badge-{{ r.estado|lower }}">{{ r.estado }}</span>
+                  {% if r.manual %}<span class="etiqueta-manual">manual</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="vacio">Todavía no hay registros hoy.</p>
+  {% endif %}
+</section>
+{% endblock %}

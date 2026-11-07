@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block titulo %}Crear cuenta{% endblock %}
+{% block clase_body %}pagina-acceso{% endblock %}
+
+{% block contenido %}
+<section class="acceso">
+  <div class="acceso-marca">
+    <span class="marca-icono" aria-hidden="true">✓</span>
+    <span>Asistencia</span>
+  </div>
+
+  <div class="tarjeta-acceso">
+    <h1>Crear cuenta de docente</h1>
+    <p class="acceso-subtitulo">Completá tus datos para empezar a usar el sistema.</p>
+
+    <form method="post" action="{{ url_for('registro_docente') }}" class="form-columna">
+      <div class="form-grilla">
+        <div class="campo">
+          <label for="nombre">Nombre</label>
+          <input id="nombre" name="nombre" type="text" maxlength="50"
+                 value="{{ formulario.get('nombre', '') }}" autocomplete="given-name" required autofocus>
+        </div>
+        <div class="campo">
+          <label for="apellido">Apellido</label>
+          <input id="apellido" name="apellido" type="text" maxlength="50"
+                 value="{{ formulario.get('apellido', '') }}" autocomplete="family-name" required>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" maxlength="254"
+               placeholder="nombre@escuela.edu.ar" value="{{ formulario.get('email', '') }}"
+               autocomplete="username" required>
+      </div>
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <div class="campo-clave">
+          <input id="clave" name="clave" type="password" minlength="8" maxlength="128"
+                 autocomplete="new-password" aria-describedby="reglas-clave" required>
+          <button type="button" class="ver-clave" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña">
+            <svg class="icono-ojo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="icono-ojo-tachado" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <ul id="reglas-clave" class="reglas-clave">
+          <li data-regla="largo">Mínimo 8 caracteres</li>
+          <li data-regla="letra">Al menos una letra</li>
+          <li data-regla="numero">Al menos un número</li>
+          <li data-regla="especial">Al menos un carácter especial (! @ # $ % & * ?)</li>
+        </ul>
+      </div>
+      <div class="campo">
+        <label for="clave_repetida">Repetir contraseña</label>
+        <div class="campo-clave">
+          <input id="clave_repetida" name="clave_repetida" type="password" minlength="8" maxlength="128"
+                 autocomplete="new-password" required>
+          <button type="button" class="ver-clave" aria-label="Mostrar contraseña" aria-pressed="false" title="Mostrar contraseña">
+            <svg class="icono-ojo" viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="icono-ojo-tachado" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="boton boton-principal boton-ancho boton-grande">Crear cuenta</button>
+    </form>
+
+    <p class="acceso-pie">¿Ya tenés cuenta?
+      <a class="enlace" href="{{ url_for('login') }}">Ingresar</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

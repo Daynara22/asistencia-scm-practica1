@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block titulo %}Informe{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Informe por alumno</h1>
+    <p class="subtitulo">Buscá un alumno por su DNI.</p>
+  </div>
+</section>
+
+<section class="tarjeta">
+  <form method="get" action="{{ url_for('informe') }}" class="form-linea">
+    <label for="buscar-dni" class="oculto">DNI</label>
+    <input id="buscar-dni" name="dni" type="text" class="solo-numeros" inputmode="numeric"
+           maxlength="10" placeholder="DNI del alumno" value="{{ dni }}" required
+           {% if not informe %}autofocus{% endif %}>
+    <button type="submit" class="boton boton-principal">Buscar</button>
+  </form>
+</section>
+
+{% if informe %}
+  <section class="tarjeta">
+    <div class="alumno-cabecera">
+      <div class="avatar" aria-hidden="true">{{ informe.nombre[0] }}</div>
+      <div>
+        <h2 class="sin-margen">{{ informe.nombre }}</h2>
+        <p class="subtitulo">DNI {{ informe.dni }} · {{ informe.total }} día{{ '' if informe.total == 1 else 's' }} registrado{{ '' if informe.total == 1 else 's' }}</p>
+      </div>
+    </div>
+
+    <div class="contadores contadores-informe">
+      <div class="contador contador-presente">
+        <span class="contador-numero">{{ informe.presentes }}</span>
+        <span class="contador-texto">Presentes · {{ informe.porcentaje_presentes }} %</span>
+      </div>
+      <div class="contador contador-tardanza">
+        <span class="contador-numero">{{ informe.tardanzas }}</span>
+        <span class="contador-texto">Tardanzas · {{ informe.porcentaje_tardanzas }} %</span>
+      </div>
+      <div class="contador contador-ausente">
+        <span class="contador-numero">{{ informe.ausentes }}</span>
+        <span class="contador-texto">Ausentes · {{ informe.porcentaje_ausentes }} %</span>
+      </div>
+      <div class="contador contador-total">
+        <span class="contador-numero">{{ informe.porcentaje_asistencia }} %</span>
+        <span class="contador-texto">Asistencia</span>
+      </div>
+    </div>
+
+    {% if informe.total %}
+      <div class="barra-asistencia" role="img"
+           aria-label="Presentes {{ informe.porcentaje_presentes }} %, tardanzas {{ informe.porcentaje_tardanzas }} %, ausentes {{ informe.porcentaje_ausentes }} %">
+        <span class="tramo tramo-presente" style="width: {{ informe.porcentaje_presentes }}%"></span>
+        <span class="tramo tramo-tardanza" style="width: {{ informe.porcentaje_tardanzas }}%"></span>
+        <span class="tramo tramo-ausente" style="width: {{ informe.porcentaje_ausentes }}%"></span>
+      </div>
+      <p class="nota">El porcentaje de asistencia cuenta presentes y tardanzas (el alumno vino, aunque tarde).</p>
+    {% endif %}
+  </section>
+
+  <section class="tarjeta">
+    <h2>Detalle por fecha</h2>
+    {% if informe.detalle %}
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Fecha</th><th>Estado</th><th>Hora</th><th>Carga</th></tr>
+          </thead>
+          <tbody>
+            {% for d in informe.detalle %}
+              <tr>
+                <td>{{ d.fecha_mostrar }}</td>
+                <td><span class="badge badge-{{ d.estado|lower }}">{{ d.estado }}</span></td>
+                <td>{{ d.hora or '—' }}</td>
+                <td>{{ 'Manual' if d.manual else 'Automática' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="vacio">Este alumno todavía no tiene asistencias registradas.</p>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}

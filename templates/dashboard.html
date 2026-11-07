@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block titulo %}Dashboard{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="subtitulo">Resumen del curso · Hoy {{ fecha_texto }}</p>
+  </div>
+  <div class="chips">
+    <span class="chip">Hora límite: <strong>{{ hora_limite }}</strong></span>
+    {% if cerrado %}
+      <span class="chip chip-cerrado">● Día cerrado</span>
+    {% else %}
+      <span class="chip chip-abierto">● Día abierto</span>
+    {% endif %}
+  </div>
+</section>
+
+<section class="estadisticas" aria-label="Números de hoy">
+  <div class="estadistica estadistica-alumnos">
+    <span class="estadistica-etiqueta">Alumnos</span>
+    <span class="estadistica-valor">{{ resumen.alumnos }}</span>
+    <span class="estadistica-detalle">{{ resumen.sin_registrar }} sin registrar hoy</span>
+  </div>
+  <div class="estadistica estadistica-presente">
+    <span class="estadistica-etiqueta">Presentes hoy</span>
+    <span class="estadistica-valor">{{ resumen.hoy.PRESENTE }}</span>
+    <span class="estadistica-detalle">Llegaron a horario</span>
+  </div>
+  <div class="estadistica estadistica-tardanza">
+    <span class="estadistica-etiqueta">Tardanzas hoy</span>
+    <span class="estadistica-valor">{{ resumen.hoy.TARDANZA }}</span>
+    <span class="estadistica-detalle">Después de las {{ hora_limite }}</span>
+  </div>
+  <div class="estadistica estadistica-ausente">
+    <span class="estadistica-etiqueta">Ausentes hoy</span>
+    <span class="estadistica-valor">{{ resumen.hoy.AUSENTE }}</span>
+    <span class="estadistica-detalle">{{ 'Día cerrado' if cerrado else 'Se marcan al cerrar el día' }}</span>
+  </div>
+</section>
+
+<div class="grilla grilla-dashboard">
+  <section class="tarjeta">
+    <div class="tarjeta-cabecera">
+      <h2>Asistencia de los últimos días</h2>
+      <span class="chip">Asistencia general: <strong>{{ resumen.porcentaje_asistencia }} %</strong></span>
+    </div>
+
+    {% if resumen.dias %}
+      <ul class="leyenda">
+        <li><span class="muestra muestra-presente" aria-hidden="true"></span>Presentes</li>
+        <li><span class="muestra muestra-tardanza" aria-hidden="true"></span>Tardanzas</li>
+        <li><span class="muestra muestra-ausente" aria-hidden="true"></span>Ausentes</li>
+      </ul>
+
+      <div class="grafico" id="grafico-dias">
+        <div class="grafico-area">
+          {% for d in resumen.dias %}
+            {% set alto = (d.total / resumen.maximo_dia * 180) if resumen.maximo_dia else 0 %}
+            <div class="columna" tabindex="0"
+                 data-fecha="{{ d.fecha_mostrar }}" data-presentes="{{ d.presentes }}"
+                 data-tardanzas="{{ d.tardanzas }}" data-ausentes="{{ d.ausentes }}"
+                 aria-label="{{ d.fecha_mostrar }}: {{ d.presentes }} presentes, {{ d.tardanzas }} tardanzas, {{ d.ausentes }} ausentes">
+              <span class="columna-total" aria-hidden="true">{{ d.total }}</span>
+              <span class="columna-pila" style="height: {{ '%.0f' % alto }}px">
+                {% if d.presentes %}<span class="segmento segmento-presente" style="flex: {{ d.presentes }} 1 0"></span>{% endif %}
+                {% if d.tardanzas %}<span class="segmento segmento-tardanza" style="flex: {{ d.tardanzas }} 1 0"></span>{% endif %}
+                {% if d.ausentes %}<span class="segmento segmento-ausente" style="flex: {{ d.ausentes }} 1 0"></span>{% endif %}
+              </span>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="grafico-ejes" aria-hidden="true">
+          {% for d in resumen.dias %}<span>{{ d.etiqueta }}</span>{% endfor %}
+        </div>
+      </div>
+
+      <details class="ver-tabla">
+        <summary>Ver los datos en una tabla</summary>
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <thead>
+              <tr><th>Fecha</th><th>Presentes</th><th>Tardanzas</th><th>Ausentes</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              {% for d in resumen.dias|reverse %}
+                <tr>
+                  <td>{{ d.fecha_mostrar }}</td><td>{{ d.presentes }}</td><td>{{ d.tardanzas }}</td>
+                  <td>{{ d.ausentes }}</td><td><strong>{{ d.total }}</strong></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {% else %}
+      <p class="vacio">Todavía no hay asistencias registradas. Cuando registres la primera, acá vas a ver el gráfico.</p>
+    {% endif %}
+
+    <div class="acciones-rapidas" style="margin-top: 1.25rem">
+      <a class="boton boton-principal" href="{{ url_for('asistencia') }}">Registrar asistencia</a>
+      <a class="boton boton-secundario" href="{{ url_for('alumnos') }}">Dar de alta un alumno</a>
+    </div>
+  </section>
+
+  <div>
+    <section class="tarjeta">
+      <h2>Más ausencias</h2>
+      {% if resumen.mas_ausencias %}
+        <ol class="ranking">
+          {% for a in resumen.mas_ausencias %}
+            <li>
+              <a href="{{ url_for('informe', dni=a.dni) }}">{{ a.nombre }}</a>
+              <span class="badge badge-ausente ranking-cantidad">{{ a.cantidad }} ausente{{ '' if a.cantidad == 1 else 's' }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="vacio">Ningún alumno tiene ausencias.</p>
+      {% endif %}
+    </section>
+
+    <section class="tarjeta">
+      <h2>Más tardanzas</h2>
+      {% if resumen.mas_tardanzas %}
+        <ol class="ranking">
+          {% for a in resumen.mas_tardanzas %}
+            <li>
+              <a href="{{ url_for('informe', dni=a.dni) }}">{{ a.nombre }}</a>
+              <span class="badge badge-tardanza ranking-cantidad">{{ a.cantidad }} tardanza{{ '' if a.cantidad == 1 else 's' }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="vacio">Ningún alumno tiene tardanzas.</p>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

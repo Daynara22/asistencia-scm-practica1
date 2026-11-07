@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block titulo %}Alumnos{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Alumnos</h1>
+    <p class="subtitulo">{{ alumnos|length }} alumno{{ '' if alumnos|length == 1 else 's' }} registrado{{ '' if alumnos|length == 1 else 's' }}</p>
+  </div>
+</section>
+
+<div class="grilla grilla-alumnos">
+  <section class="tarjeta">
+    <h2>Alta de alumno</h2>
+    <form method="post" action="{{ url_for('alumnos') }}" class="form-columna">
+      <div class="campo">
+        <label for="dni">DNI</label>
+        <input id="dni" name="dni" type="text" class="solo-numeros" inputmode="numeric"
+               maxlength="10" placeholder="7 u 8 dígitos" value="{{ formulario.get('dni', '') }}"
+               autocomplete="off" required>
+      </div>
+      <div class="campo">
+        <label for="nombre">Nombre</label>
+        <input id="nombre" name="nombre" type="text" maxlength="50"
+               value="{{ formulario.get('nombre', '') }}" required>
+      </div>
+      <div class="campo">
+        <label for="apellido">Apellido</label>
+        <input id="apellido" name="apellido" type="text" maxlength="50"
+               value="{{ formulario.get('apellido', '') }}" required>
+      </div>
+      <button type="submit" class="boton boton-principal boton-ancho">Dar de alta</button>
+    </form>
+  </section>
+
+  <section class="tarjeta">
+    <div class="tarjeta-cabecera">
+      <h2>Listado</h2>
+      {% if alumnos %}
+        <label for="filtro-alumnos" class="oculto">Buscar alumno</label>
+        <input id="filtro-alumnos" type="search" class="buscador" placeholder="Buscar por nombre o DNI">
+      {% endif %}
+    </div>
+
+    {% if alumnos %}
+      <div class="tabla-contenedor">
+        <table class="tabla" id="tabla-alumnos">
+          <thead>
+            <tr><th>Apellido</th><th>Nombre</th><th>DNI</th><th>Asistencia</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for a in alumnos %}
+              <tr>
+                <td>{{ a.apellido }}</td>
+                <td>{{ a.nombre }}</td>
+                <td>{{ a.dni }}</td>
+                <td>{{ a.porcentaje if a.porcentaje is not none else '—' }}{{ ' %' if a.porcentaje is not none else '' }}</td>
+                <td><a class="enlace" href="{{ url_for('informe', dni=a.dni) }}">Ver informe →</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="vacio oculto" id="sin-resultados">No hay alumnos que coincidan con la búsqueda.</p>
+    {% else %}
+      <p class="vacio">Todavía no hay alumnos. Cargá el primero con el formulario.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

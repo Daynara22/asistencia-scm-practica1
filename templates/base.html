@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Asistencia{% endblock %} · Sistema de Asistencia</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css', v=version_estaticos) }}">
+</head>
+<body class="{% block clase_body %}{% endblock %}">
+  {% if docente %}
+  <header class="cabecera-sitio">
+    <div class="bienvenida">
+      <div class="contenedor bienvenida-interior">
+        <div class="saludo">
+          <span class="saludo-avatar" aria-hidden="true">{{ docente.nombre[:1] }}{{ docente.apellido[:1] }}</span>
+          <p class="saludo-texto">
+            <span class="saludo-titulo">Bienvenido docente</span>
+            <strong class="saludo-nombre">{{ docente.nombre }} {{ docente.apellido }}</strong>
+          </p>
+        </div>
+        <form method="post" action="{{ url_for('logout') }}">
+          <button type="submit" class="boton-salir">
+            <svg class="icono-salir" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Cerrar sesión
+          </button>
+        </form>
+      </div>
+    </div>
+    <div class="barra">
+      <div class="contenedor barra-interior">
+        <a class="marca" href="{{ url_for('dashboard') }}">
+          <span class="marca-icono" aria-hidden="true">✓</span>
+          <span>Asistencia</span>
+        </a>
+        <nav class="menu" aria-label="Navegación principal">
+          <a href="{{ url_for('dashboard') }}" class="{{ 'activo' if seccion == 'dashboard' else '' }}">Dashboard</a>
+          <a href="{{ url_for('asistencia') }}" class="{{ 'activo' if seccion == 'registro' else '' }}">Registrar asistencia</a>
+          <a href="{{ url_for('alumnos') }}" class="{{ 'activo' if seccion == 'alumnos' else '' }}">Alumnos</a>
+          <a href="{{ url_for('informe') }}" class="{{ 'activo' if seccion == 'informe' else '' }}">Informe</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="contenedor">
+    {% with mensajes = get_flashed_messages(with_categories=true) %}
+      {% if mensajes %}
+        <div class="mensajes">
+          {% for categoria, texto in mensajes %}
+            <div class="mensaje mensaje-{{ categoria }}" role="{{ 'alert' if categoria != 'exito' else 'status' }}">
+              <span class="mensaje-icono" aria-hidden="true">
+                {% if categoria == 'exito' %}✓{% elif categoria == 'aviso' %}!{% else %}✕{% endif %}
+              </span>
+              <span class="mensaje-texto">{{ texto }}</span>
+              <button type="button" class="cerrar-mensaje" aria-label="Cerrar mensaje">×</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <footer class="pie">Sistema de Asistencia · Python + FastAPI</footer>
+
+  <script src="{{ url_for('static', filename='app.js', v=version_estaticos) }}"></script>
+</body>
+</html>
