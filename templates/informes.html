@@ -44,6 +44,15 @@
         {% endfor %}
       </select>
     </div>
+    <div class="campo">
+      <label for="dni">Alumno</label>
+      <select id="dni" name="dni">
+        <option value="">Todos</option>
+        {% for a in alumnos %}
+          <option value="{{ a.dni }}" {{ 'selected' if filtro.dni == a.dni else '' }}>{{ a.apellido }}, {{ a.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
     <button type="submit" class="boton boton-principal">Filtrar</button>
     <a class="boton boton-secundario" href="{{ url_for('informe_total') }}">Limpiar</a>
   </form>
@@ -82,7 +91,7 @@
         <span class="contador-numero">{{ g.porcentaje_asistencia }} %</span>
         <span class="contador-texto">Asistencia</span>
       </div>
-      <div class="contador {{ 'contador-ausente' if g.superados else 'contador-tardanza' if g.cerca else 'contador-presente' }}">
+      <div class="contador {{ 'contador-superado' if g.superados else 'contador-cerca' if g.cerca else 'contador-normal' }}">
         <span class="contador-numero">{{ g.cerca + g.superados }}</span>
         <span class="contador-texto">Con alerta de faltas</span>
       </div>
@@ -140,7 +149,8 @@
     <div class="tabla-contenedor">
       <table class="tabla" id="tabla-informe-alumnos">
         <thead>
-          <tr><th>Alumno</th><th>Curso</th><th>P</th><th>T</th><th>A</th><th>Asistencia</th><th>Faltas</th><th></th></tr>
+          <tr><th>Alumno</th><th>Curso</th><th class="numero">Clases asistidas</th><th class="numero">Tardanzas</th>
+              <th class="numero">Inasistencias</th><th class="numero">Asistencia</th><th class="numero">Faltas</th><th>Estado</th><th></th></tr>
         </thead>
         <tbody>
           {% for a in informe.alumnos %}
@@ -148,19 +158,20 @@
             <tr>
               <td>{{ a.nombre }}</td>
               <td>{{ a.curso }}</td>
-              <td>{{ a.presentes }}</td>
-              <td>{{ a.tardanzas }}</td>
-              <td>{{ a.ausentes }}</td>
-              <td>{{ a.porcentaje_asistencia }} %</td>
-              <td><span class="badge {{ 'badge-ausente' if s.estado == 'superado' else 'badge-tardanza' if s.estado == 'cerca' else 'badge-presente' }}"
-                        title="{{ s.mensaje or 'Dentro del límite' }}">{{ s.faltas_texto }} / {{ s.limite }}</span></td>
+              <td class="numero">{{ a.asistidas }}</td>
+              <td class="numero">{{ a.tardanzas }}</td>
+              <td class="numero">{{ a.ausentes }}</td>
+              <td class="numero">{{ a.porcentaje_asistencia }} %</td>
+              <td class="numero">{{ s.faltas_texto }} / {{ s.limite }}</td>
+              <td><span class="badge badge-{{ s.estado }}" title="{{ s.mensaje or 'Dentro del límite' }}">
+                {{ {'normal': 'Normal', 'cerca': 'Cerca del límite', 'superado': 'Superó el límite'}[s.estado] }}</span></td>
               <td><a class="enlace" href="{{ url_for('informe', dni=a.dni, desde=filtro.desde, hasta=filtro.hasta) }}">Ver →</a></td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    <p class="nota">P = presentes, T = tardanzas, A = ausentes en el período. Las faltas y el límite cuentan todo el ciclo.</p>
+    <p class="nota">Clases asistidas = presentes + tardanzas en el período. Las faltas suman inasistencias y tardanzas según la equivalencia configurada, y cuentan todo el ciclo.</p>
   </section>
   {% endif %}
 {% endif %}

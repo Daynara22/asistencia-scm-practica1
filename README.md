@@ -10,6 +10,13 @@ Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardado
 
 ## Funciones
 
+- **Interfaz moderna y responsive** con **menú lateral** (se abre y cierra con
+  el botón de hamburguesa; en celulares se oculta solo), **modo claro / oscuro**
+  que se recuerda, íconos y tarjetas. Cada rol ve solo sus opciones.
+- **Gráficos** (sección *Gráficos*): dona con presentes / tardanzas /
+  ausentes, barras comparando a los alumnos de un curso y línea con la
+  evolución de la asistencia, con filtros y adaptados a los dos modos.
+
 - **Dashboard** (pantalla de inicio): alumnos, presentes, tardanzas y ausentes de hoy,
   % de asistencia general, gráfico de los últimos 7 días con registros (con detalle al
   pasar el mouse y vista en tabla) y los alumnos con más ausencias y más tardanzas.
@@ -36,11 +43,11 @@ Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardado
   administrador da de baja alumnos y modifica docentes, cursos y horarios
   (el docente ve esos listados sin poder cambiarlos). Las materias se crean
   solas al escribirlas en un docente o un horario.
-- **Límite de faltas** (pantalla *Límite de faltas*):
+- **Límite de faltas** (pantalla *Configuración*):
   - Límite **general** (por defecto 10 faltas) y, opcionalmente, un límite
     **propio de cada curso** que reemplaza al general.
-  - Cada ausencia es una falta. Cada tardanza suma lo que se configure:
-    nada (por defecto), 1/4, 1/2 o 1 falta.
+  - Cada ausencia es una falta. Se configura cuántas tardanzas equivalen a
+    una falta: no suman (por defecto), 4, 2 o 1.
   - **Alertas**: "cerca del límite" desde el **75 %** del límite y "límite
     superado" cuando lo pasa. Se ven en el informe del alumno (también en
     *Mi asistencia*), en el listado de alumnos (faltas / límite con color) y
@@ -88,12 +95,14 @@ asistencia-scm-practica1/
 │   │   ├── cursos.py       # ABM de cursos
 │   │   ├── horarios.py     # ABM de horarios y superposición
 │   │   ├── limites.py      # Límite de faltas y alertas
+│   │   ├── graficos.py     # Datos y geometría de los gráficos SVG
 │   │   ├── asistencias.py  # Registro, carga manual y cierre del día
 │   │   ├── configuracion.py# Hora límite
 │   │   └── informes.py     # Informe por alumno, total por curso y dashboard
 │   └── interfaz/           # Aplicación web (FastAPI)
 │       ├── __init__.py     # crear_app(): rutas, sesión y errores
 │       ├── comun.py        # Plantillas, mensajes, conexión y sesión
+│       ├── iconos.py       # Íconos SVG del menú y los botones
 │       └── rutas_*.py      # Pantallas agrupadas por tema
 ├── templates/              # Páginas HTML
 ├── static/                 # CSS, JavaScript y fuentes
@@ -164,7 +173,7 @@ uvicorn app:app --reload --port 5000
 
 Con el entorno activado:
 ```
-pytest            # 428 tests
+pytest            # 482 tests
 pytest --cov      # con reporte de cobertura (mínimo 90 %, hoy 100 %)
 flake8            # verificación de PEP 8
 ```

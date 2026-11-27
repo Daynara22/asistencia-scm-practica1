@@ -88,10 +88,10 @@
                 <td>
                   {% if usuario.es_administrador %}
                   <div class="acciones-fila">
-                    <a class="boton boton-secundario boton-chico" href="{{ url_for('cursos', editar=c.id) }}">Editar</a>
+                    <a class="boton boton-secundario boton-fila" href="{{ url_for('cursos', editar=c.id) }}" title="Editar">{{ icono('editar') }}<span class="solo-lector">Editar</span></a>
                     <form method="post" action="{{ url_for('eliminar_curso', id=c.id) }}">
-                      <button type="submit" class="boton boton-peligro boton-chico"
-                              data-confirmar="¿Seguro? Se borran sus horarios">Dar de baja</button>
+                      <button type="submit" class="boton boton-peligro boton-fila" title="Dar de baja"
+                              data-confirmar="¿Seguro? Se borran sus horarios">{{ icono('borrar') }}<span class="solo-lector">Dar de baja</span></button>
                     </form>
                   </div>
                   {% endif %}

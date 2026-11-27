@@ -4,6 +4,7 @@ rutas_informes.py - Panel de informes de asistencia y exportación.
 - /informe          informe de un alumno (docentes y administradores)
 - /informes         informe total, general y por curso
 - /mi-asistencia    informe propio del alumno que inició sesión
+- /graficos         dona, barras por alumno y evolución en el tiempo
 Cada uno acepta filtro por fechas (?desde=AAAA-MM-DD&hasta=AAAA-MM-DD)
 y se puede descargar en CSV o PDF agregando /csv o /pdf a la dirección.
 """
@@ -14,8 +15,9 @@ from fastapi.responses import Response
 
 from asistencia import exportar
 from asistencia.interfaz.comun import (flash, obtener_conexion, pagina,
-                                       requiere_alumno, requiere_docente)
-from asistencia.servicios import alumnos, cursos, informes
+                                       requiere_alumno, requiere_docente,
+                                       requiere_usuario)
+from asistencia.servicios import alumnos, cursos, graficos, informes
 from asistencia.validaciones import ErrorValidacion
 
 rutas = APIRouter()
@@ -133,38 +135,45 @@ async def exportar_mi_asistencia(request: Request, formato: str,
 # Informe total
 # ----------------------------------------------------------------------
 
-def _informe_total(conexion, desde, hasta, curso):
+def _informe_total(conexion, desde, hasta, curso, dni=""):
     """Valida los filtros y arma el informe total."""
     desde, hasta = informes.validar_rango(desde, hasta)
     curso_id = curso if str(curso or "").strip() else None
-    return informes.informe_total(conexion, desde, hasta, curso_id)
+    dni = str(dni or "").strip() or None
+    return informes.informe_total(conexion, desde, hasta, curso_id, dni)
 
 
-def pantalla_informe_total(request, conexion, desde, hasta, curso):
+def pantalla_informe_total(request, conexion, desde, hasta, curso, dni=""):
     """Arma la pantalla del informe total."""
     try:
-        resultado, codigo = _informe_total(conexion, desde, hasta,
-                                           curso), 200
+        resultado, codigo = _informe_total(conexion, desde, hasta, curso,
+                                           dni), 200
     except ErrorValidacion as error:
         flash(request, str(error), "error")
         resultado, codigo = None, 400
+    curso_id = int(curso) if str(curso).isdigit() else None
     return pagina(request, "informes.html", codigo, seccion="informe",
                   informe=resultado, cursos=cursos.listar(conexion),
-                  filtro={"desde": desde, "hasta": hasta, "curso": curso})
+                  alumnos=alumnos.listar(conexion, curso_id),
+                  filtro={"desde": desde, "hasta": hasta, "curso": curso,
+                          "dni": dni})
 
 
 @rutas.get("/informes", name="informe_total")
 async def informe_total(request: Request, desde: str = "", hasta: str = "",
-                        curso: str = "", conexion=Depends(obtener_conexion),
+                        curso: str = "", dni: str = "",
+                        conexion=Depends(obtener_conexion),
                         usuario=Depends(requiere_docente)):
-    """Resumen general y por curso, con filtros."""
-    return pantalla_informe_total(request, conexion, desde, hasta, curso)
+    """Resumen general y por curso, con filtros por fecha, curso y
+    alumno."""
+    return pantalla_informe_total(request, conexion, desde, hasta, curso,
+                                  dni)
 
 
 @rutas.get("/informes/{formato}", name="exportar_informe_total")
 async def exportar_informe_total(request: Request, formato: str,
                                  desde: str = "", hasta: str = "",
-                                 curso: str = "",
+                                 curso: str = "", dni: str = "",
                                  conexion=Depends(obtener_conexion),
                                  usuario=Depends(requiere_docente)):
     """Descarga el informe total en CSV o PDF."""
@@ -172,11 +181,80 @@ async def exportar_informe_total(request: Request, formato: str,
         return pagina(request, "error.html", 404, codigo=404,
                       mensaje="La página que buscás no existe.")
     try:
-        resultado = _informe_total(conexion, desde, hasta, curso)
+        resultado = _informe_total(conexion, desde, hasta, curso, dni)
     except ErrorValidacion:
         # La pantalla vuelve a armar el informe y muestra el mensaje.
-        return pantalla_informe_total(request, conexion, desde, hasta, curso)
+        return pantalla_informe_total(request, conexion, desde, hasta, curso,
+                                      dni)
     nombre = f"asistencia-total-{_sufijo_fecha()}.{formato}"
     if formato == "csv":
         return descargar(exportar.csv_total(resultado), nombre, TIPO_CSV)
     return descargar(exportar.pdf_total(resultado), nombre, TIPO_PDF)
+
+
+# ----------------------------------------------------------------------
+# Gráficos
+# ----------------------------------------------------------------------
+
+def _datos_graficos(conexion, usuario, desde, hasta, curso, dni):
+    """
+    Arma los tres gráficos con los filtros elegidos.
+
+    - Dona: el alumno elegido; si no hay, todos los del filtro.
+    - Barras: los alumnos del curso elegido (o del primer curso).
+    - Línea: la evolución con los mismos filtros que la dona.
+    Un alumno solo ve sus propios datos: sin barras ni otros alumnos.
+    """
+    desde, hasta = informes.validar_rango(desde, hasta)
+    curso_id = curso if str(curso or "").strip() else None
+    dni = str(dni or "").strip() or None
+    if usuario.es_alumno:
+        curso_id, dni = None, _dni_propio(conexion, usuario)
+
+    total = informes.informe_total(conexion, desde, hasta, curso_id, dni)
+    general = total["general"]
+    datos = {
+        "periodo": total["periodo"],
+        "sujeto": total["alumno"] or total["curso"] or "Todos los alumnos",
+        "dona": graficos.dona(general["presentes"], general["tardanzas"],
+                              general["ausentes"]),
+        "evolucion": None,
+        "barras": None,
+        "curso_barras": None,
+    }
+    serie = graficos.evolucion(conexion, desde, hasta, curso_id, dni)
+    datos["agrupado"] = serie["agrupado"]
+    datos["evolucion"] = graficos.geometria_linea(serie["puntos"])
+
+    if not usuario.es_alumno:
+        lista_cursos = cursos.listar(conexion)
+        curso_barras = curso_id or (lista_cursos[0]["id"]
+                                    if lista_cursos else None)
+        if curso_barras is not None:
+            del_curso = informes.informe_total(conexion, desde, hasta,
+                                               curso_barras)
+            datos["barras"] = graficos.barras(del_curso["alumnos"])
+            datos["curso_barras"] = del_curso["curso"]
+    return datos
+
+
+@rutas.get("/graficos", name="graficos")
+async def ver_graficos(request: Request, desde: str = "", hasta: str = "",
+                       curso: str = "", dni: str = "",
+                       conexion=Depends(obtener_conexion),
+                       usuario=Depends(requiere_usuario)):
+    """Gráficos de asistencia: dona, barras por alumno y evolución."""
+    filtro = {"desde": desde, "hasta": hasta, "curso": curso, "dni": dni}
+    try:
+        datos, codigo = _datos_graficos(conexion, usuario, desde, hasta,
+                                        curso, dni), 200
+    except ErrorValidacion as error:
+        flash(request, str(error), "error")
+        datos, codigo = None, 400
+    lista_alumnos = []
+    if not usuario.es_alumno:
+        curso_id = int(curso) if curso.isdigit() else None
+        lista_alumnos = alumnos.listar(conexion, curso_id)
+    return pagina(request, "graficos.html", codigo, seccion="graficos",
+                  datos=datos, filtro=filtro, alumnos=lista_alumnos,
+                  cursos=[] if usuario.es_alumno else cursos.listar(conexion))

@@ -104,17 +104,17 @@
                 <td>{{ a.porcentaje if a.porcentaje is not none else '—' }}{{ ' %' if a.porcentaje is not none else '' }}</td>
                 <td>
                   {% set s = a.situacion %}
-                  <span class="badge {{ 'badge-ausente' if s.estado == 'superado' else 'badge-tardanza' if s.estado == 'cerca' else 'badge-presente' }}"
+                  <span class="badge badge-{{ s.estado }}"
                         title="{{ s.mensaje or 'Dentro del límite' }}">{{ s.faltas_texto }} / {{ s.limite }}</span>
                 </td>
                 <td>
                   <div class="acciones-fila">
-                    <a class="enlace" href="{{ url_for('informe', dni=a.dni) }}">Ver informe →</a>
-                    <a class="boton boton-secundario boton-chico" href="{{ url_for('alumnos', editar=a.id) }}">Editar</a>
+                    <a class="boton boton-secundario boton-fila" href="{{ url_for('informe', dni=a.dni) }}" title="Ver informe">{{ icono('informes') }}<span class="solo-lector">Ver informe</span></a>
+                    <a class="boton boton-secundario boton-fila" href="{{ url_for('alumnos', editar=a.id) }}" title="Editar">{{ icono('editar') }}<span class="solo-lector">Editar</span></a>
                     {% if usuario.es_administrador %}
                       <form method="post" action="{{ url_for('eliminar_alumno', id=a.id) }}">
-                        <button type="submit" class="boton boton-peligro boton-chico"
-                                data-confirmar="¿Seguro? Se borra su asistencia">Dar de baja</button>
+                        <button type="submit" class="boton boton-peligro boton-fila" title="Dar de baja"
+                                data-confirmar="¿Seguro? Se borra su asistencia">{{ icono('borrar') }}<span class="solo-lector">Dar de baja</span></button>
                       </form>
                     {% endif %}
                   </div>

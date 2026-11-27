@@ -4,78 +4,128 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}Asistencia{% endblock %} · Sistema de Asistencia</title>
+  <script>
+    // Aplica el tema y el estado del menú guardados ANTES de dibujar la
+    // página, así no hay un parpadeo de modo claro al entrar.
+    (function () {
+      var raiz = document.documentElement;
+      var tema = localStorage.getItem("tema");
+      if (tema !== "claro" && tema !== "oscuro") {
+        tema = window.matchMedia("(prefers-color-scheme: dark)").matches ? "oscuro" : "claro";
+      }
+      raiz.dataset.tema = tema;
+      if (localStorage.getItem("sidebar") === "cerrado") raiz.dataset.sidebar = "cerrado";
+    })();
+  </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css', v=version_estaticos) }}">
 </head>
 <body class="{% block clase_body %}{% endblock %}">
-  {% if usuario %}
-  <header class="cabecera-sitio">
-    <div class="bienvenida">
-      <div class="contenedor bienvenida-interior">
-        <div class="saludo">
-          <span class="saludo-avatar" aria-hidden="true">{{ usuario.nombre[:1] }}{{ usuario.apellido[:1] }}</span>
-          <p class="saludo-texto">
-            <span class="saludo-titulo">Bienvenido {{ usuario.rol }}</span>
-            <strong class="saludo-nombre">{{ usuario.nombre }} {{ usuario.apellido }}</strong>
-          </p>
-        </div>
-        <form method="post" action="{{ url_for('logout') }}">
-          <button type="submit" class="boton-salir">
-            <svg class="icono-salir" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Cerrar sesión
-          </button>
-        </form>
-      </div>
-    </div>
-    <div class="barra">
-      <div class="contenedor barra-interior">
-        <a class="marca" href="{{ url_for('dashboard') }}">
-          <span class="marca-icono" aria-hidden="true">✓</span>
-          <span>Asistencia</span>
-        </a>
-        <nav class="menu" aria-label="Navegación principal">
-          {# Cada rol ve solo las pantallas a las que puede entrar. #}
-          {% if usuario.es_alumno %}
-          <a href="{{ url_for('mi_asistencia') }}" class="{{ 'activo' if seccion == 'mi_asistencia' else '' }}">Mi asistencia</a>
-          {% else %}
-          <a href="{{ url_for('dashboard') }}" class="{{ 'activo' if seccion == 'dashboard' else '' }}">Dashboard</a>
-          <a href="{{ url_for('asistencia') }}" class="{{ 'activo' if seccion == 'registro' else '' }}">Registrar asistencia</a>
-          <a href="{{ url_for('alumnos') }}" class="{{ 'activo' if seccion == 'alumnos' else '' }}">Alumnos</a>
-          <a href="{{ url_for('docentes') }}" class="{{ 'activo' if seccion == 'docentes' else '' }}">Docentes</a>
-          <a href="{{ url_for('cursos') }}" class="{{ 'activo' if seccion == 'cursos' else '' }}">Cursos</a>
-          <a href="{{ url_for('horarios') }}" class="{{ 'activo' if seccion == 'horarios' else '' }}">Horarios</a>
-          <a href="{{ url_for('informe_total') }}" class="{{ 'activo' if seccion == 'informe' else '' }}">Informes</a>
-          <a href="{{ url_for('limites') }}" class="{{ 'activo' if seccion == 'limites' else '' }}">Límite de faltas</a>
-          {% endif %}
+
+{% macro boton_tema(clase="") %}
+  <button type="button" class="boton-icono boton-tema {{ clase }}" id="boton-tema"
+          aria-label="Cambiar entre modo claro y oscuro" title="Cambiar entre modo claro y oscuro">
+    {{ icono('luna', 'icono-luna') }}{{ icono('sol', 'icono-sol') }}
+  </button>
+{% endmacro %}
+
+{% macro enlace(destino, etiqueta, nombre_icono, clave) %}
+  <li><a href="{{ url_for(destino) }}" class="sidebar-enlace {{ 'activo' if seccion == clave else '' }}"
+         {% if seccion == clave %}aria-current="page"{% endif %}>{{ icono(nombre_icono) }}<span>{{ etiqueta }}</span></a></li>
+{% endmacro %}
+
+{% if usuario %}
+  {# ---------------- Menú lateral: cada rol ve solo sus opciones ---------------- #}
+  <aside class="sidebar" id="sidebar" aria-label="Menú principal">
+    <a class="sidebar-marca" href="{{ url_for('dashboard') }}">
+      <span class="marca-icono">{{ icono('marca') }}</span>
+      <span>Asistencia</span>
+    </a>
+    <nav class="sidebar-nav">
+      {% if usuario.es_alumno %}
+        <p class="sidebar-seccion">Mi cuenta</p>
+        <ul>
+          {{ enlace('mi_asistencia', 'Mi asistencia', 'informes', 'mi_asistencia') }}
+          {{ enlace('graficos', 'Gráficos', 'graficos', 'graficos') }}
+        </ul>
+      {% else %}
+        <p class="sidebar-seccion">Principal</p>
+        <ul>
+          {{ enlace('dashboard', 'Inicio', 'inicio', 'dashboard') }}
+          {{ enlace('asistencia', 'Tomar asistencia', 'asistencia', 'registro') }}
+        </ul>
+        <p class="sidebar-seccion">Gestión</p>
+        <ul>
+          {{ enlace('alumnos', 'Alumnos', 'alumnos', 'alumnos') }}
+          {{ enlace('docentes', 'Docentes', 'docentes', 'docentes') }}
+          {{ enlace('cursos', 'Cursos', 'cursos', 'cursos') }}
+          {{ enlace('horarios', 'Horarios', 'horarios', 'horarios') }}
           {% if usuario.es_administrador %}
-          <a href="{{ url_for('usuarios') }}" class="{{ 'activo' if seccion == 'usuarios' else '' }}">Usuarios</a>
+            {{ enlace('usuarios', 'Usuarios', 'usuarios', 'usuarios') }}
           {% endif %}
-        </nav>
-      </div>
-    </div>
-  </header>
-  {% endif %}
-
-  <main class="contenedor">
-    {% with mensajes = get_flashed_messages(with_categories=true) %}
-      {% if mensajes %}
-        <div class="mensajes">
-          {% for categoria, texto in mensajes %}
-            <div class="mensaje mensaje-{{ categoria }}" role="{{ 'alert' if categoria != 'exito' else 'status' }}">
-              <span class="mensaje-icono" aria-hidden="true">
-                {% if categoria == 'exito' %}✓{% elif categoria == 'aviso' %}!{% else %}✕{% endif %}
-              </span>
-              <span class="mensaje-texto">{{ texto }}</span>
-              <button type="button" class="cerrar-mensaje" aria-label="Cerrar mensaje">×</button>
-            </div>
-          {% endfor %}
-        </div>
+        </ul>
+        <p class="sidebar-seccion">Análisis</p>
+        <ul>
+          {{ enlace('informe_total', 'Informes', 'informes', 'informe') }}
+          {{ enlace('graficos', 'Gráficos', 'graficos', 'graficos') }}
+        </ul>
+        <p class="sidebar-seccion">Ajustes</p>
+        <ul>
+          {{ enlace('limites', 'Configuración', 'configuracion', 'limites') }}
+        </ul>
       {% endif %}
-    {% endwith %}
+    </nav>
+    <div class="sidebar-pie">
+      <form method="post" action="{{ url_for('logout') }}">
+        <button type="submit" class="sidebar-enlace sidebar-salir">{{ icono('salir') }}<span>Cerrar sesión</span></button>
+      </form>
+    </div>
+  </aside>
+  <div class="fondo-menu" id="fondo-menu" aria-hidden="true"></div>
 
-    {% block contenido %}{% endblock %}
-  </main>
+  <div class="principal">
+    {# ---------------- Barra superior ---------------- #}
+    <header class="barra-superior">
+      <button type="button" class="boton-icono" id="boton-menu" aria-controls="sidebar"
+              aria-expanded="true" aria-label="Abrir o cerrar el menú" title="Abrir o cerrar el menú">
+        {{ icono('menu') }}
+      </button>
+      <p class="barra-titulo">{{ self.titulo() }}</p>
+      {{ boton_tema() }}
+      <div class="usuario">
+        <span class="saludo-avatar" aria-hidden="true">{{ usuario.nombre[:1] }}{{ usuario.apellido[:1] }}</span>
+        <p class="saludo-texto">
+          <span class="saludo-titulo">Bienvenido {{ usuario.rol }}</span>
+          <strong class="saludo-nombre">{{ usuario.nombre }} {{ usuario.apellido }}</strong>
+        </p>
+      </div>
+    </header>
+{% else %}
+  <div class="acceso-tema">{{ boton_tema() }}</div>
+  <div class="principal-acceso">
+{% endif %}
 
-  <footer class="pie">Sistema de Asistencia · Python + FastAPI</footer>
+    <main class="contenedor" id="contenido">
+      {% with mensajes = get_flashed_messages(with_categories=true) %}
+        {% if mensajes %}
+          <div class="mensajes">
+            {% for categoria, texto in mensajes %}
+              <div class="mensaje mensaje-{{ categoria }}" role="{{ 'alert' if categoria != 'exito' else 'status' }}">
+                <span class="mensaje-icono" aria-hidden="true">
+                  {% if categoria == 'exito' %}✓{% elif categoria == 'aviso' %}!{% else %}✕{% endif %}
+                </span>
+                <span class="mensaje-texto">{{ texto }}</span>
+                <button type="button" class="cerrar-mensaje" aria-label="Cerrar mensaje">×</button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block contenido %}{% endblock %}
+    </main>
+
+    <footer class="pie">Sistema de Asistencia · Python + FastAPI</footer>
+  </div>
 
   <script src="{{ url_for('static', filename='app.js', v=version_estaticos) }}"></script>
 </body>

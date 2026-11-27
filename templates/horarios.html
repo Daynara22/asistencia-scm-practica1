@@ -105,10 +105,10 @@
                 {% if usuario.es_administrador %}
                 <td>
                   <div class="acciones-fila">
-                    <a class="boton boton-secundario boton-chico" href="{{ url_for('horarios', editar=h.id) }}">Editar</a>
+                    <a class="boton boton-secundario boton-fila" href="{{ url_for('horarios', editar=h.id) }}" title="Editar">{{ icono('editar') }}<span class="solo-lector">Editar</span></a>
                     <form method="post" action="{{ url_for('eliminar_horario', id=h.id) }}">
-                      <button type="submit" class="boton boton-peligro boton-chico"
-                              data-confirmar="¿Seguro? Tocá de nuevo">Quitar</button>
+                      <button type="submit" class="boton boton-peligro boton-fila" title="Quitar"
+                              data-confirmar="¿Seguro? Tocá de nuevo">{{ icono('borrar') }}<span class="solo-lector">Quitar</span></button>
                     </form>
                   </div>
                 </td>
