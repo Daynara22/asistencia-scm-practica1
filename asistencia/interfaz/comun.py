@@ -41,15 +41,17 @@ def flash(request, mensaje, categoria="exito"):
 
 
 @pass_context
-def get_flashed_messages(contexto, with_categories=False):
-    """Devuelve (y borra) los mensajes pendientes. Se usa en base.html."""
+def get_flashed_messages(contexto, with_categories=True):
+    """
+    Devuelve (y borra) los mensajes pendientes como (categoría, texto).
+
+    Se usa en base.html. El parámetro with_categories se acepta por
+    compatibilidad con la plantilla; siempre se devuelven las categorías.
+    """
     request = contexto["request"]
     if "session" not in request.scope:      # p. ej. en una página de error
         return []
-    mensajes = request.session.pop("_mensajes", [])
-    if with_categories:
-        return [tuple(m) for m in mensajes]
-    return [m[1] for m in mensajes]
+    return [tuple(m) for m in request.session.pop("_mensajes", [])]
 
 
 # ----------------------------------------------------------------------
