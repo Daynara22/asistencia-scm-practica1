@@ -8,10 +8,17 @@ Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardado
 - **Dashboard** (pantalla de inicio): alumnos, presentes, tardanzas y ausentes de hoy,
   % de asistencia general, gráfico de los últimos 7 días con registros (con detalle al
   pasar el mouse y vista en tabla) y los alumnos con más ausencias y más tardanzas.
-- **Login de docentes** con email y contraseña. Cada docente crea su cuenta desde
-  «Crear cuenta de docente». Al entrar, la barra superior muestra
-  **"Bienvenido docente"** y el nombre del docente que inició sesión.
-  Sin iniciar sesión no se puede ver ni usar ninguna pantalla del sistema.
+- **Login multiusuario con roles** (email y contraseña, guardada como hash):
+  | Rol | Puede |
+  |---|---|
+  | **Administrador** | Todo lo del docente, más la pantalla **Usuarios**: crear cuentas de alumno y pasar cuentas de docente a administrador (y al revés). |
+  | **Docente** | Dashboard, registrar asistencia, alta de alumnos, informes y hora límite. |
+  | **Alumno** | Solo **Mi asistencia**: su propio informe. |
+
+  La **primera cuenta** que se crea en una base vacía queda como administrador;
+  las siguientes, como docentes. Siempre queda al menos un administrador.
+  Sin iniciar sesión no se puede ver ni usar ninguna pantalla, y cada rol
+  recibe "No tenés permiso" (403) en las pantallas que no le corresponden.
 - **Alta de alumnos** con DNI, nombre y apellido (sin DNI repetidos).
 - **Registro por DNI**: se ingresa el DNI y el sistema guarda la hora y calcula el estado solo.
   - Hasta la hora límite (inclusive) → **PRESENTE**
@@ -28,6 +35,7 @@ Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardado
 asistencia-scm-practica1/
 ├── app.py                  # Punto de entrada: python app.py
 ├── migrar_json.py          # Pasa los datos del antiguo JSON a SQLite
+├── gestionar_usuarios.py   # Lista cuentas y da el rol de administrador
 ├── main.py                 # Módulo de consola original (v2.1.0)
 ├── asistencia/
 │   ├── bd.py               # Conexión a SQLite, esquema y transacciones
@@ -88,6 +96,12 @@ python migrar_json.py
 El JSON no se modifica y queda como respaldo. Se puede ejecutar más de una
 vez sin duplicar datos.
 
+Las cuentas migradas quedan como **docentes**. Para elegir quién administra:
+```
+python gestionar_usuarios.py listar
+python gestionar_usuarios.py hacer-admin email@escuela.edu.ar
+```
+
 > **Base de datos:** por defecto es `datos/asistencia.db`. Para usar otra,
 > definí la variable de entorno `ASISTENCIA_BD` con la ruta del archivo.
 
@@ -137,7 +151,7 @@ Todas se hacen **en el servidor** (`asistencia/validaciones.py` y `asistencia/se
 
 | Tabla | Contenido |
 |---|---|
-| `usuarios` | Cuentas de docentes: email (único), nombre, apellido y hash de la clave |
+| `usuarios` | Cuentas: email (único), nombre, apellido, hash de la clave, rol (`administrador`, `docente` o `alumno`) y alumno vinculado |
 | `alumnos` | DNI (único), nombre y apellido |
 | `asistencias` | Alumno, fecha, estado, hora y si fue carga manual (un registro por alumno y fecha) |
 | `dias_cerrados` | Fechas cerradas |
