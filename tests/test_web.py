@@ -5,8 +5,10 @@ from contextlib import closing
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from asistencia import bd
+from asistencia.interfaz import comun, rutas_asistencia
 from asistencia.interfaz import crear_app
 from tests.conftest import DOCENTE, datos_alumno
 
@@ -264,3 +266,71 @@ def test_la_base_real_no_se_usa_en_los_tests(ruta_memoria):
     assert "mode=memory" in ruta_memoria
     with closing(sqlite3.connect(ruta_memoria, uri=True)) as conexion:
         assert conexion.execute("PRAGMA user_version").fetchone()[0] >= 1
+
+
+# ----------------------------------------------------------------------
+# Casos borde de la interfaz
+# ----------------------------------------------------------------------
+
+def test_punto_de_entrada_crea_la_aplicacion(monkeypatch, tmp_path):
+    """app.py arma la aplicación con la base de ASISTENCIA_BD."""
+    import importlib
+
+    import app as modulo_app
+    monkeypatch.setenv("ASISTENCIA_BD", str(tmp_path / "entrada.db"))
+    importlib.reload(modulo_app)
+    assert modulo_app.app.state.ruta_bd == str(tmp_path / "entrada.db")
+
+
+def test_con_sesion_registro_lleva_al_dashboard(cliente):
+    """Si ya hay sesión, la pantalla de crear cuenta lleva al inicio."""
+    r = cliente.get("/registro-docente")
+    assert r.status_code == 302 and r.headers["Location"] == "/"
+
+
+def test_cerrar_el_dia_dos_veces(cliente):
+    """La segunda vez avisa que el día ya estaba cerrado."""
+    cliente.post("/cerrar-dia")
+    r = cliente.post("/cerrar-dia")
+    assert r.status_code == 400 and "ya estaba cerrado" in r.text
+
+
+def test_error_inesperado_muestra_pagina_amigable(ruta_memoria,
+                                                  monkeypatch):
+    """Un error de programación no muestra el detalle técnico."""
+    def falla(*args, **kwargs):
+        """Simula un error que nadie esperaba."""
+        raise RuntimeError("detalle interno que no se debe ver")
+
+    monkeypatch.setattr(rutas_asistencia.informes, "resumen_general", falla)
+    app = crear_app(ruta_memoria, clave_secreta="clave-de-prueba")
+    with TestClient(app, raise_server_exceptions=False) as cliente_web:
+        cliente_web.post("/registro-docente", data=DOCENTE)
+        r = cliente_web.get("/")
+    assert r.status_code == 500
+    assert "Ocurrió un error inesperado" in r.text
+    assert "detalle interno" not in r.text
+
+
+def test_version_estaticos_sin_archivos(monkeypatch):
+    """Si no encuentra el CSS o el JS, la versión es 0 (no falla)."""
+    monkeypatch.setattr(comun, "CARPETA_ESTATICOS", "/carpeta/inexistente")
+    assert comun.version_estaticos() == 0
+
+
+def test_ruta_con_id_que_la_ruta_no_usa(cliente):
+    """Si la ruta no lleva {id}, el id va después del "?"."""
+    request = Request({"type": "http", "app": cliente.app})
+    assert comun.ruta_de(request, "alumnos", id=3) == "/alumnos?id=3"
+    assert comun.ruta_de(request, "modificar_alumno", id=3) == \
+        "/alumnos/3"
+    assert comun.ruta_de(request, "informe", dni="1", desde="") == \
+        "/informe?dni=1"
+
+
+def test_usuario_sin_sesion_en_pagina_de_error(cliente):
+    """Sin sesión en el pedido, la página de error sigue sin usuario."""
+    request = Request({"type": "http", "app": cliente.app})
+    assert comun.buscar_usuario_sin_conexion(request) is None
+    # Y los mensajes pendientes quedan vacíos en lugar de fallar.
+    assert comun.get_flashed_messages({"request": request}) == []

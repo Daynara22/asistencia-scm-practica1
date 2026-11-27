@@ -168,3 +168,23 @@ def test_eliminar_alumno_inexistente(con_alumnos):
     with pytest.raises(ErrorValidacion):
         alumnos.eliminar(con_alumnos, "999")
     assert alumnos.cantidad(con_alumnos) == 2
+
+
+# ---------------- Respaldo de la base ante pedidos simultáneos ----------
+
+def test_la_base_impide_dni_duplicado_si_falla_el_control(
+        con_alumnos, monkeypatch):
+    """
+    Si dos altas llegan juntas y ambas pasan el control en Python, la
+    restricción UNIQUE de la base frena a la segunda.
+    """
+    monkeypatch.setattr(alumnos, "_revisar_repetidos",
+                        lambda *args, **kwargs: None)
+    with pytest.raises(ErrorValidacion, match="Ya existe un alumno"):
+        alumnos.alta(con_alumnos, "45123456", "Otro", "Alumno",
+                     "otro@alumnos.edu.ar", CURSO_ID)
+    juan = alumnos.buscar_por_dni(con_alumnos, "45123456")
+    with pytest.raises(ErrorValidacion, match="Ya existe un alumno"):
+        alumnos.modificar(con_alumnos, juan.id, "1234567", "Juan", "Pérez",
+                          "", "")
+    assert alumnos.cantidad(con_alumnos) == 2

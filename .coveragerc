@@ -1,0 +1,18 @@
+# Configuración de la cobertura de tests (pytest-cov / coverage.py).
+[run]
+source =
+    asistencia
+    app
+    main
+    migrar_json
+    gestionar_usuarios
+branch = True
+
+[report]
+show_missing = True
+skip_covered = False
+# El pipeline falla si la cobertura baja de este porcentaje.
+fail_under = 90
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:

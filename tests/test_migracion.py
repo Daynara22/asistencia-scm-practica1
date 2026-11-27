@@ -109,3 +109,28 @@ def test_script_sin_archivo(tmp_path, capsys):
     """Si el JSON no existe, el script avisa y termina con error."""
     assert migrar_json.main([str(tmp_path / "no-existe.json")]) == 1
     assert "No se encontró" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("cambio", [
+    {"alumnos": {"45123456": {"nombre": "Juan"}}},
+    {"alumnos": {"45123456": "Juan Pérez"}},
+    {"asistencias": {"2026-11-05": {"45123456": {"estado": "FERIADO"}}}},
+    {"docentes": {"a@b.com": {"nombre": "Ana", "apellido": "Díaz"}}},
+    {"alumnos": ["no", "es", "un", "objeto"]},
+])
+def test_json_con_datos_incompletos(tmp_path, cambio):
+    """Cada parte del JSON se revisa antes de importar."""
+    ruta = tmp_path / "asistencia.json"
+    ruta.write_text(json.dumps({**DATOS_JSON, **cambio}), encoding="utf-8")
+    with pytest.raises(ErrorMigracion):
+        leer_json(str(ruta))
+
+
+def test_script_con_json_danado(tmp_path, monkeypatch, capsys):
+    """El script avisa si el JSON está dañado y no crea nada."""
+    ruta = tmp_path / "asistencia.json"
+    ruta.write_text("{roto", encoding="utf-8")
+    monkeypatch.setenv("ASISTENCIA_BD", str(tmp_path / "nueva.db"))
+    assert migrar_json.main([str(ruta)]) == 1
+    assert "No se pudo migrar" in capsys.readouterr().out
+    assert not (tmp_path / "nueva.db").exists()

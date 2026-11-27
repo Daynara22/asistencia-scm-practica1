@@ -180,3 +180,21 @@ def test_resumen_del_dia(con_alumnos):
     assert resumen["cantidades"] == {PRESENTE: 0, TARDANZA: 1, AUSENTE: 0}
     assert resumen["sin_registrar"] == 1
     assert resumen["registros"][0]["nombre"] == "Juan Pérez"
+
+
+def test_la_base_impide_dos_registros_del_mismo_dia(con_alumnos,
+                                                    monkeypatch):
+    """
+    Si dos registros llegan juntos y ambos pasan el control en Python,
+    la restricción UNIQUE de la base frena al segundo.
+    """
+    asistencias.registrar(con_alumnos, "45123456", ahora=a_las(8, 0))
+    asistencias.carga_manual(con_alumnos, "1234567", "2026-11-02",
+                             "AUSENTE", "", hoy=HOY)
+    monkeypatch.setattr(asistencias, "_registro_previo",
+                        lambda *args, **kwargs: None)
+    with pytest.raises(ErrorValidacion, match="ya tiene registrada"):
+        asistencias.registrar(con_alumnos, "45123456", ahora=a_las(8, 5))
+    with pytest.raises(ErrorValidacion, match="ya tiene un registro"):
+        asistencias.carga_manual(con_alumnos, "1234567", "2026-11-02",
+                                 "AUSENTE", "", hoy=HOY)

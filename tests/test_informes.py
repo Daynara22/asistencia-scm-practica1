@@ -211,3 +211,11 @@ def test_informe_total_alumnos_sin_curso(con_semana):
     total = informes.informe_total(con_semana)
     assert total["cursos"][-1]["nombre"] == "Sin curso"
     assert total["alumnos"][-1]["nombre"] == "Juan Pérez"
+
+
+def test_texto_del_periodo_solo_hasta(con_semana):
+    """Con solo la fecha final, el período lo dice así."""
+    informe = informes.informe_alumno(con_semana, "45123456",
+                                      hasta=date(2026, 11, 3))
+    assert informe["periodo"] == "Hasta el 03/11/2026"
+    assert informe["total"] == 2

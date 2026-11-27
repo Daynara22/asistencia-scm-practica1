@@ -204,3 +204,12 @@ def test_docente_si_puede_editar_alumnos(cliente_docente):
 def test_alumno_no_ve_los_abm(cliente_alumno, ruta):
     """El alumno no entra a ninguna pantalla de ABM."""
     assert cliente_alumno.get(ruta).status_code == 403
+
+
+@pytest.mark.parametrize("ruta", ["/docentes?editar=999",
+                                  "/cursos?editar=999",
+                                  "/horarios?editar=abc"])
+def test_editar_inexistente(cliente, ruta):
+    """Editar algo que no existe muestra el error y el listado."""
+    r = cliente.get(ruta)
+    assert r.status_code == 404 and "no existe" in r.text

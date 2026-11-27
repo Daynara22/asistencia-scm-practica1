@@ -199,3 +199,15 @@ def test_alumno_descarga_solo_su_informe(cliente_alumno):
     assert cliente_alumno.get("/informe/pdf?dni=1234567").status_code == \
         403
     assert cliente_alumno.get("/informes/csv").status_code == 403
+
+
+def test_pdf_total_sin_alumnos(conexion):
+    """Sin alumnos, el PDF total igual se genera con un aviso."""
+    contenido = exportar.pdf_total(informes.informe_total(conexion))
+    assert contenido.startswith(b"%PDF-")
+
+
+def test_descarga_total_con_filtro_invalido(cliente_con_datos):
+    """Con un filtro inválido, el informe total explica el error."""
+    r = cliente_con_datos.get("/informes/csv?curso=99")
+    assert r.status_code == 400 and "no existe" in r.text
