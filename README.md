@@ -31,6 +31,16 @@ Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardado
   administrador da de baja alumnos y modifica docentes, cursos y horarios
   (el docente ve esos listados sin poder cambiarlos). Las materias se crean
   solas al escribirlas en un docente o un horario.
+- **Límite de faltas** (pantalla *Límite de faltas*):
+  - Límite **general** (por defecto 10 faltas) y, opcionalmente, un límite
+    **propio de cada curso** que reemplaza al general.
+  - Cada ausencia es una falta. Cada tardanza suma lo que se configure:
+    nada (por defecto), 1/4, 1/2 o 1 falta.
+  - **Alertas**: "cerca del límite" desde el **75 %** del límite y "límite
+    superado" cuando lo pasa. Se ven en el informe del alumno (también en
+    *Mi asistencia*), en el listado de alumnos (faltas / límite con color) y
+    en el dashboard (*Alertas de faltas*).
+  - Docentes ven la configuración; solo el administrador la cambia.
 - **Registro por DNI**: se ingresa el DNI y el sistema guarda la hora y calcula el estado solo.
   - Hasta la hora límite (inclusive) → **PRESENTE**
   - Después de la hora límite → **TARDANZA**
@@ -61,6 +71,7 @@ asistencia-scm-practica1/
 │   │   ├── materias.py     # Materias (se crean solas)
 │   │   ├── cursos.py       # ABM de cursos
 │   │   ├── horarios.py     # ABM de horarios y superposición
+│   │   ├── limites.py      # Límite de faltas y alertas
 │   │   ├── asistencias.py  # Registro, carga manual y cierre del día
 │   │   ├── configuracion.py# Hora límite
 │   │   └── informes.py     # Informe por alumno y dashboard
@@ -171,8 +182,8 @@ Todas se hacen **en el servidor** (`asistencia/validaciones.py` y `asistencia/se
 | `docentes` | DNI y email (únicos), nombre y apellido |
 | `materias` | Nombre (único, sin distinguir mayúsculas) |
 | `docente_materias` | Qué materias dicta cada docente |
-| `cursos` | Nombre, año, división y docente a cargo |
+| `cursos` | Nombre, año, división, docente a cargo y límite de faltas propio (opcional) |
 | `horarios` | Curso, día (0 = lunes), hora de inicio y fin, materia |
 | `asistencias` | Alumno, fecha, estado, hora y si fue carga manual (un registro por alumno y fecha) |
 | `dias_cerrados` | Fechas cerradas |
-| `configuracion` | Opciones del sistema (hora límite) |
+| `configuracion` | Opciones del sistema: hora límite, límite general de faltas y valor de la tardanza |
