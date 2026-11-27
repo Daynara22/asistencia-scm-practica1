@@ -1,7 +1,12 @@
 # Sistema de Asistencia de Alumnos
 
+[![Tests y PEP 8](https://github.com/Daynara22/asistencia-scm-practica1/actions/workflows/tests.yml/badge.svg)](https://github.com/Daynara22/asistencia-scm-practica1/actions/workflows/tests.yml)
+
 Sistema web para registrar la asistencia de alumnos por DNI.
 Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardados en una base **SQLite**.
+
+> El informe del trabajo práctico (objetivo, funcionalidades agregadas, tests,
+> pipeline y herramientas) está en [INFORME.md](INFORME.md).
 
 ## Funciones
 
@@ -159,10 +164,24 @@ uvicorn app:app --reload --port 5000
 
 Con el entorno activado:
 ```
-pytest
-flake8
+pytest            # 428 tests
+pytest --cov      # con reporte de cobertura (mínimo 90 %, hoy 100 %)
+flake8            # verificación de PEP 8
 ```
 Los tests usan bases SQLite en memoria: nunca tocan `datos/asistencia.db`.
+
+## Integración continua
+
+El workflow [`.github/workflows/tests.yml`](.github/workflows/tests.yml) corre
+en cada push y en cada pull request, con Python 3.10 y 3.13:
+
+1. instala las dependencias de `requirements.txt`;
+2. verifica PEP 8 con **flake8**;
+3. ejecuta los tests con **pytest** y cobertura.
+
+Si flake8 encuentra un aviso, si falla un test o si la cobertura baja del 90 %,
+el pipeline queda en rojo (badge de arriba). El reporte de cobertura se
+descarga desde la ejecución, en la pestaña **Actions** → *Artifacts*.
 
 ## Validaciones
 
