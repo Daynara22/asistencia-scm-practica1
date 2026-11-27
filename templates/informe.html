@@ -14,18 +14,31 @@
   </div>
 </section>
 
-{# El alumno solo ve su propio informe: no tiene buscador. #}
-{% if not propio %}
+{# El alumno solo ve su propio informe: no tiene buscador por DNI. #}
 <section class="tarjeta">
-  <form method="get" action="{{ url_for('informe') }}" class="form-linea">
-    <label for="buscar-dni" class="oculto">DNI</label>
-    <input id="buscar-dni" name="dni" type="text" class="solo-numeros" inputmode="numeric"
-           maxlength="10" placeholder="DNI del alumno" value="{{ dni }}" required
-           {% if not informe %}autofocus{% endif %}>
-    <button type="submit" class="boton boton-principal">Buscar</button>
+  <form method="get" action="{{ url_for('mi_asistencia') if propio else url_for('informe') }}" class="form-linea filtro-informe">
+    {% if not propio %}
+      <div class="campo">
+        <label for="buscar-dni">DNI</label>
+        <input id="buscar-dni" name="dni" type="text" class="solo-numeros" inputmode="numeric"
+               maxlength="10" placeholder="DNI del alumno" value="{{ dni }}" required
+               {% if not informe %}autofocus{% endif %}>
+      </div>
+    {% endif %}
+    <div class="campo">
+      <label for="desde">Desde</label>
+      <input id="desde" name="desde" type="date" value="{{ desde }}">
+    </div>
+    <div class="campo">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" name="hasta" type="date" value="{{ hasta }}">
+    </div>
+    <button type="submit" class="boton boton-principal">{{ 'Filtrar' if propio else 'Buscar' }}</button>
   </form>
+  {% if not propio %}
+    <p class="nota"><a class="enlace" href="{{ url_for('informe_total') }}">Ver el informe total por curso →</a></p>
+  {% endif %}
 </section>
-{% endif %}
 
 {% if informe %}
   <section class="tarjeta">
@@ -33,8 +46,15 @@
       <div class="avatar" aria-hidden="true">{{ informe.nombre[0] }}</div>
       <div>
         <h2 class="sin-margen">{{ informe.nombre }}</h2>
-        <p class="subtitulo">DNI {{ informe.dni }} · {{ informe.total }} día{{ '' if informe.total == 1 else 's' }} registrado{{ '' if informe.total == 1 else 's' }}</p>
+        <p class="subtitulo">DNI {{ informe.dni }}{% if informe.curso %} · {{ informe.curso }}{% endif %} · {{ informe.total }} día{{ '' if informe.total == 1 else 's' }} registrado{{ '' if informe.total == 1 else 's' }} · {{ informe.periodo }}</p>
       </div>
+    </div>
+
+    {% set ruta_exportar = 'exportar_mi_asistencia' if propio else 'exportar_informe' %}
+    {% set parametros = {'desde': desde, 'hasta': hasta} if propio else {'dni': informe.dni, 'desde': desde, 'hasta': hasta} %}
+    <div class="acciones-fila descargas">
+      <a class="boton boton-secundario boton-chico" href="{{ url_for(ruta_exportar, formato='csv', **parametros) }}">Descargar CSV</a>
+      <a class="boton boton-secundario boton-chico" href="{{ url_for(ruta_exportar, formato='pdf', **parametros) }}">Descargar PDF</a>
     </div>
 
     {% set s = informe.situacion %}
@@ -81,6 +101,9 @@
         <span class="tramo tramo-ausente" style="width: {{ informe.porcentaje_ausentes }}%"></span>
       </div>
       <p class="nota">El porcentaje de asistencia cuenta presentes y tardanzas (el alumno vino, aunque tarde).</p>
+      {% if informe.filtrado %}
+        <p class="nota">Las cantidades son del período elegido; las faltas y el límite cuentan todo el ciclo.</p>
+      {% endif %}
     {% endif %}
   </section>
 
@@ -105,7 +128,7 @@
         </table>
       </div>
     {% else %}
-      <p class="vacio">Este alumno todavía no tiene asistencias registradas.</p>
+      <p class="vacio">{{ 'No hay asistencias registradas en el período elegido.' if informe.filtrado else 'Este alumno todavía no tiene asistencias registradas.' }}</p>
     {% endif %}
   </section>
 {% endif %}

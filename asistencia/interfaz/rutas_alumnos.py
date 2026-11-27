@@ -1,5 +1,5 @@
 """
-rutas_alumnos.py - ABM de alumnos, informe por alumno y "Mi asistencia".
+rutas_alumnos.py - ABM de alumnos.
 
 Docentes y administradores dan de alta y modifican alumnos; solo los
 administradores los dan de baja (se borra también su asistencia).
@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Request
 from asistencia.interfaz.comun import (flash, obtener_conexion, pagina,
                                        procesar_formulario,
                                        requiere_administrador,
-                                       requiere_alumno, requiere_docente)
+                                       requiere_docente)
 from asistencia.servicios import alumnos as servicio_alumnos
 from asistencia.servicios import cursos, informes, limites
 from asistencia.servicios.alumnos import obtener as obtener_alumno
@@ -108,32 +108,3 @@ async def eliminar_alumno(request: Request, id: str,
         lambda a: f"Se dio de baja a {a.nombre_completo}.",
         "alumnos",
         lambda f: pantalla_alumnos(request, conexion, codigo=400))
-
-
-@rutas.get("/informe", name="informe")
-async def informe(request: Request, dni: str = "",
-                  conexion=Depends(obtener_conexion),
-                  usuario=Depends(requiere_docente)):
-    """Informe de asistencia de un alumno, buscado por DNI."""
-    dni = dni.strip()
-    resultado = None
-    codigo = 200
-    if dni:
-        try:
-            resultado = informes.informe_alumno(conexion, dni)
-        except ErrorValidacion as error:
-            flash(request, str(error), "error")
-            codigo = 400
-    return pagina(request, "informe.html", codigo, seccion="informe",
-                  dni=dni, informe=resultado)
-
-
-@rutas.get("/mi-asistencia", name="mi_asistencia")
-async def mi_asistencia(request: Request,
-                        conexion=Depends(obtener_conexion),
-                        usuario=Depends(requiere_alumno)):
-    """Informe propio del alumno que inició sesión (solo el suyo)."""
-    alumno = obtener_alumno(conexion, usuario.alumno_id)
-    resultado = informes.informe_alumno(conexion, alumno.dni)
-    return pagina(request, "informe.html", seccion="mi_asistencia",
-                  dni=alumno.dni, informe=resultado, propio=True)

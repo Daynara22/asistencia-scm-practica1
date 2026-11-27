@@ -17,8 +17,8 @@ from starlette.middleware.sessions import SessionMiddleware
 from asistencia import bd
 from asistencia.interfaz import (rutas_acceso, rutas_alumnos,
                                  rutas_asistencia, rutas_cursos,
-                                 rutas_docentes, rutas_limites,
-                                 rutas_usuarios)
+                                 rutas_docentes, rutas_informes,
+                                 rutas_limites, rutas_usuarios)
 from asistencia.interfaz.comun import (CARPETA_ESTATICOS, NoAutenticado,
                                        SinPermiso,
                                        buscar_usuario_sin_conexion, pagina,
@@ -118,6 +118,7 @@ def crear_app(ruta_bd=None, clave_secreta=None):
     app.include_router(rutas_acceso.rutas)
     app.include_router(rutas_asistencia.rutas)
     app.include_router(rutas_alumnos.rutas)
+    app.include_router(rutas_informes.rutas)
     app.include_router(rutas_usuarios.rutas)
     app.include_router(rutas_docentes.rutas)
     app.include_router(rutas_cursos.rutas)

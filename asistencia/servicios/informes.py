@@ -1,14 +1,22 @@
 """
-informes.py - Informe por alumno y resumen general para el dashboard.
+informes.py - Informes de asistencia.
+
+- informe_alumno: un alumno, con filtro opcional por fechas.
+- informe_total: resumen general y por curso, con filtros por fechas y
+  por curso, y una fila por alumno (para la tabla y la exportación).
+- resumen_general: datos del dashboard.
 
 El porcentaje de asistencia cuenta PRESENTE y TARDANZA como asistió
-(el alumno vino, aunque tarde).
+(el alumno vino, aunque tarde). El estado respecto del límite de faltas
+siempre se calcula con todos los registros del alumno, sin importar el
+filtro de fechas: el límite es para todo el ciclo lectivo.
 """
 from datetime import date, datetime
 
-from asistencia.modelos import AUSENTE, PRESENTE, TARDANZA
-from asistencia.servicios import alumnos, limites
+from asistencia.modelos import AUSENTE, PRESENTE, TARDANZA, Curso
+from asistencia.servicios import alumnos, cursos, limites
 from asistencia.servicios.asistencias import resumen_del_dia
+from asistencia.validaciones import ErrorValidacion, validar_fecha
 
 DIAS_SEMANA = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
 
@@ -31,12 +39,82 @@ def _fecha_para_mostrar(texto):
     return datetime.strptime(texto, "%Y-%m-%d").strftime("%d/%m/%Y")
 
 
-def informe_alumno(conexion, dni):
-    """Informe completo de un alumno: cantidades, porcentajes y detalle."""
+def validar_rango(desde_texto, hasta_texto):
+    """
+    Convierte el filtro de fechas del formulario en (desde, hasta).
+
+    Cualquiera de las dos puede quedar vacía (None = sin límite). Si
+    están las dos, 'desde' no puede ser posterior a 'hasta'.
+    """
+    desde = hasta = None
+    if str(desde_texto or "").strip():
+        desde = validar_fecha(desde_texto)
+    if str(hasta_texto or "").strip():
+        hasta = validar_fecha(hasta_texto)
+    if desde and hasta and desde > hasta:
+        raise ErrorValidacion(
+            "La fecha 'desde' no puede ser posterior a la fecha 'hasta'.")
+    return desde, hasta
+
+
+def _condicion_fechas(columna, desde, hasta):
+    """
+    Fragmento SQL y parámetros para filtrar 'columna' entre dos fechas.
+
+    'columna' es siempre un nombre fijo escrito en este módulo; las
+    fechas van como parámetros (?), nunca pegadas en el texto.
+    """
+    condiciones, parametros = [], []
+    if desde:
+        condiciones.append(f"{columna} >= ?")
+        parametros.append(desde.isoformat())
+    if hasta:
+        condiciones.append(f"{columna} <= ?")
+        parametros.append(hasta.isoformat())
+    return " AND ".join(condiciones) or "1 = 1", parametros
+
+
+def _texto_periodo(desde, hasta):
+    """'Del 01/11/2026 al 30/11/2026', 'Desde el ...' o 'Todo el
+    período'."""
+    if desde and hasta:
+        return (f"Del {desde.strftime('%d/%m/%Y')} al "
+                f"{hasta.strftime('%d/%m/%Y')}")
+    if desde:
+        return f"Desde el {desde.strftime('%d/%m/%Y')}"
+    if hasta:
+        return f"Hasta el {hasta.strftime('%d/%m/%Y')}"
+    return "Todo el período"
+
+
+def _porcentajes(presentes, tardanzas, ausentes):
+    """Totales y porcentajes de un grupo de registros."""
+    total = presentes + tardanzas + ausentes
+    return {
+        "presentes": presentes,
+        "tardanzas": tardanzas,
+        "ausentes": ausentes,
+        "total": total,
+        "porcentaje_asistencia": porcentaje(presentes + tardanzas, total),
+        "porcentaje_presentes": porcentaje(presentes, total),
+        "porcentaje_tardanzas": porcentaje(tardanzas, total),
+        "porcentaje_ausentes": porcentaje(ausentes, total),
+    }
+
+
+def informe_alumno(conexion, dni, desde=None, hasta=None):
+    """
+    Informe de un alumno: cantidades, porcentajes y detalle por fecha.
+
+    desde / hasta (objetos date, opcionales) limitan los registros
+    contados. La situación respecto del límite usa todos los registros.
+    """
     alumno = alumnos.buscar_por_dni(conexion, dni)
+    condicion, parametros = _condicion_fechas("fecha", desde, hasta)
     filas = conexion.execute(
         "SELECT fecha, estado, hora, manual FROM asistencias "
-        "WHERE alumno_id = ? ORDER BY fecha DESC", (alumno.id,)).fetchall()
+        f"WHERE alumno_id = ? AND {condicion} ORDER BY fecha DESC",
+        [alumno.id, *parametros]).fetchall()
 
     detalle = [{
         "fecha": fila["fecha"],
@@ -47,23 +125,97 @@ def informe_alumno(conexion, dni):
     } for fila in filas]
 
     cuenta = _contar(filas)
-    total = len(filas)
+    curso = None
+    if alumno.curso_id:
+        curso = cursos.obtener(conexion, alumno.curso_id)
     return {
         "dni": alumno.dni,
         "nombre": alumno.nombre_completo,
-        "presentes": cuenta[PRESENTE],
-        "tardanzas": cuenta[TARDANZA],
-        "ausentes": cuenta[AUSENTE],
-        "total": total,
-        "porcentaje_asistencia": porcentaje(
-            cuenta[PRESENTE] + cuenta[TARDANZA], total),
-        "porcentaje_presentes": porcentaje(cuenta[PRESENTE], total),
-        "porcentaje_tardanzas": porcentaje(cuenta[TARDANZA], total),
-        "porcentaje_ausentes": porcentaje(cuenta[AUSENTE], total),
+        "curso": curso.nombre_completo if curso else None,
+        **_porcentajes(cuenta[PRESENTE], cuenta[TARDANZA], cuenta[AUSENTE]),
         "detalle": detalle,
+        "periodo": _texto_periodo(desde, hasta),
+        "filtrado": bool(desde or hasta),
         # Faltas, límite y estado (normal, cerca o superado).
         "situacion": limites.situacion_alumno(conexion, alumno),
     }
+
+
+def informe_total(conexion, desde=None, hasta=None, curso_id=None):
+    """
+    Resumen de asistencia general y por curso.
+
+    Devuelve un diccionario con:
+      - general: totales y porcentajes de todos los alumnos filtrados.
+      - cursos: lo mismo por cada curso (y "Sin curso" si hay alumnos
+        sin curso asignado).
+      - alumnos: una fila por alumno con sus cantidades y su estado
+        respecto del límite de faltas.
+    """
+    if curso_id is not None:
+        curso_id = cursos.buscar(conexion, curso_id).id
+    condicion, parametros = _condicion_fechas("a.fecha", desde, hasta)
+    # LEFT JOIN: los alumnos sin registros en el período aparecen con 0.
+    filas = conexion.execute(
+        "SELECT al.id, al.dni, al.nombre, al.apellido, al.curso_id, "
+        "COALESCE(SUM(a.estado = 'PRESENTE'), 0) AS presentes, "
+        "COALESCE(SUM(a.estado = 'TARDANZA'), 0) AS tardanzas, "
+        "COALESCE(SUM(a.estado = 'AUSENTE'), 0) AS ausentes "
+        "FROM alumnos al LEFT JOIN asistencias a "
+        f"ON a.alumno_id = al.id AND {condicion} "
+        "WHERE ? IS NULL OR al.curso_id = ? GROUP BY al.id",
+        [*parametros, curso_id, curso_id]).fetchall()
+
+    nombres = {fila["id"]: Curso.desde_fila(fila).nombre_completo
+               for fila in conexion.execute("SELECT * FROM cursos")}
+    situaciones = limites.situacion_de_todos(conexion)
+
+    filas_alumnos = [{
+        "dni": fila["dni"],
+        "nombre": f"{fila['nombre']} {fila['apellido']}",
+        "apellido": fila["apellido"],
+        "curso_id": fila["curso_id"],
+        "curso": nombres.get(fila["curso_id"], "Sin curso"),
+        **_porcentajes(fila["presentes"], fila["tardanzas"],
+                       fila["ausentes"]),
+        "situacion": situaciones[fila["id"]],
+    } for fila in filas]
+    # Por curso (los sin curso al final) y dentro de cada curso por
+    # apellido.
+    filas_alumnos.sort(key=lambda a: (
+        a["curso_id"] is None, alumnos.clave_de_orden(a["curso"]),
+        alumnos.clave_de_orden(a["apellido"]),
+        alumnos.clave_de_orden(a["nombre"])))
+
+    return {
+        "periodo": _texto_periodo(desde, hasta),
+        "curso": nombres.get(curso_id),
+        "general": _resumir_grupo("General", filas_alumnos),
+        "cursos": _resumir_por_curso(filas_alumnos),
+        "alumnos": filas_alumnos,
+    }
+
+
+def _resumir_grupo(nombre, filas_alumnos):
+    """Suma las filas de un grupo de alumnos (un curso o todos)."""
+    resumen = _porcentajes(
+        sum(a["presentes"] for a in filas_alumnos),
+        sum(a["tardanzas"] for a in filas_alumnos),
+        sum(a["ausentes"] for a in filas_alumnos))
+    estados = [a["situacion"]["estado"] for a in filas_alumnos]
+    return {"nombre": nombre, "alumnos": len(filas_alumnos), **resumen,
+            "cerca": estados.count(limites.CERCA),
+            "superados": estados.count(limites.SUPERADO)}
+
+
+def _resumir_por_curso(filas_alumnos):
+    """Un resumen por curso, en el orden en que vienen las filas."""
+    grupos = {}
+    for fila in filas_alumnos:
+        clave = (fila["curso_id"], fila["curso"])
+        grupos.setdefault(clave, []).append(fila)
+    return [{"id": curso_id, **_resumir_grupo(nombre, filas)}
+            for (curso_id, nombre), filas in grupos.items()]
 
 
 def porcentajes_por_alumno(conexion):

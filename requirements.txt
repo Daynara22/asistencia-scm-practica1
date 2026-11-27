@@ -4,6 +4,7 @@ uvicorn>=0.30
 jinja2>=3.1
 python-multipart>=0.0.9
 itsdangerous>=2.1
+fpdf2>=2.7          # exportación de informes a PDF
 
 # Tests y calidad de código
 httpx>=0.27

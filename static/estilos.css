@@ -432,3 +432,11 @@ input:disabled { background: var(--fondo); cursor: not-allowed; }
 
 /* ---------- Límite de faltas ---------- */
 .alerta-faltas { margin-bottom: 1rem; }
+
+/* ---------- Panel de informes ---------- */
+.filtro-informe { align-items: flex-end; flex-wrap: wrap; gap: .75rem; }
+.filtro-informe .campo { margin: 0; }
+.descargas { margin: .25rem 0 1rem; }
+.fila-general td { font-weight: 700; background: var(--principal-suave); }
+.barra-curso { min-width: 140px; }
+.barra-curso .barra-asistencia { margin: 0; height: 12px; }

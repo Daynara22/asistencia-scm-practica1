@@ -12,6 +12,7 @@ from fastapi import Depends, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
+from starlette.routing import NoMatchFound
 
 from asistencia import bd
 from asistencia.modelos import ADMINISTRADOR, ALUMNO, DOCENTE
@@ -55,7 +56,32 @@ def get_flashed_messages(contexto, with_categories=False):
 # Direcciones y respuestas
 # ----------------------------------------------------------------------
 
-def ruta_de(request, nombre, id=None, **parametros):
+# Parámetros que algunas rutas llevan dentro de la dirección:
+# /cursos/{id}, /informe/{formato}...
+PARAMETROS_EN_RUTA = ("id", "formato")
+
+
+def _armar_ruta(app, nombre, parametros):
+    """
+    Devuelve la dirección de la ruta y saca de 'parametros' los que usó.
+
+    Primero prueba poniendo id/formato dentro de la dirección; si la ruta
+    no los lleva, quedan para después del "?".
+    """
+    en_ruta = {clave: str(parametros[clave]) for clave in PARAMETROS_EN_RUTA
+               if parametros.get(clave) is not None}
+    if en_ruta:
+        try:
+            ruta = app.url_path_for(nombre, **en_ruta)
+        except NoMatchFound:
+            return app.url_path_for(nombre)
+        for clave in en_ruta:
+            parametros.pop(clave)
+        return ruta
+    return app.url_path_for(nombre)
+
+
+def ruta_de(request, nombre, **parametros):
     """
     Arma la dirección de una página por su nombre.
 
@@ -63,22 +89,25 @@ def ruta_de(request, nombre, id=None, **parametros):
         -> /static/estilos.css?v=3
     ruta_de(request, 'informe', dni='45123456') -> /informe?dni=45123456
     ruta_de(request, 'modificar_curso', id=3) -> /cursos/3
+    ruta_de(request, 'exportar_informe', formato='pdf', dni='45123456')
+        -> /informe/pdf?dni=45123456
 
-    "id" va dentro de la dirección; los demás parámetros, después del "?".
+    Los parámetros que la ruta tiene en su dirección ({id}, {formato})
+    van ahí; el resto, después del "?". Los vacíos o None se omiten.
     """
     if nombre == "static":
         ruta = "/static/" + parametros.pop("filename")
-    elif id is not None:
-        ruta = request.app.url_path_for(nombre, id=str(id))
     else:
-        ruta = request.app.url_path_for(nombre)
-    return f"{ruta}?{urlencode(parametros)}" if parametros else ruta
+        ruta = _armar_ruta(request.app, nombre, parametros)
+    consulta = {clave: valor for clave, valor in parametros.items()
+                if valor is not None and valor != ""}
+    return f"{ruta}?{urlencode(consulta)}" if consulta else ruta
 
 
 @pass_context
-def url_for(contexto, nombre, id=None, **parametros):
+def url_for(contexto, nombre, **parametros):
     """Versión de ruta_de para usar dentro de las plantillas."""
-    return ruta_de(contexto["request"], nombre, id, **parametros)
+    return ruta_de(contexto["request"], nombre, **parametros)
 
 
 def version_estaticos():
@@ -109,9 +138,9 @@ def pagina(request, plantilla, estado_http=200, **contexto):
                                       status_code=estado_http)
 
 
-def redirigir(request, nombre, id=None, **parametros):
+def redirigir(request, nombre, **parametros):
     """Respuesta que lleva a otra página (código 302)."""
-    return RedirectResponse(ruta_de(request, nombre, id, **parametros),
+    return RedirectResponse(ruta_de(request, nombre, **parametros),
                             status_code=302)
 
 
