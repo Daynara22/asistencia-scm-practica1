@@ -47,8 +47,18 @@ Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardado
 - **Hora límite configurable** desde la pantalla principal (por defecto 08:15).
 - **Cerrar el día**: marca **AUSENTE** a quienes no se registraron y bloquea el día.
 - **Carga manual** de una tardanza (con hora de llegada) o una ausencia de otra fecha.
-- **Informe por alumno**: presentes, tardanzas, ausentes, porcentajes y detalle por fecha.
-  El porcentaje de asistencia cuenta presentes + tardanzas.
+- **Panel de informes** (menú *Informes*):
+  - **Informe total**: resumen general y **por curso** (presentes, tardanzas,
+    ausentes, % de asistencia y alumnos con alerta de faltas), una fila por
+    alumno y un **gráfico de barras** apiladas por curso. Filtros por
+    **fechas** (desde / hasta) y por **curso**.
+  - **Informe por alumno**: cantidades, porcentajes, estado respecto del
+    límite y detalle por fecha, con filtro por fechas.
+  - **Exportación a CSV y PDF** de los dos informes (y de *Mi asistencia*
+    para el alumno), respetando los filtros. El CSV usa `;` y coma decimal
+    para abrirse bien en Excel en español.
+  - El porcentaje de asistencia cuenta presentes + tardanzas. Las faltas y el
+    límite siempre cuentan todo el ciclo, aunque se filtre por fechas.
 
 ## Estructura
 
@@ -64,6 +74,7 @@ asistencia-scm-practica1/
 │   ├── validaciones.py     # Validación de DNI, nombres, emails, fechas, horas
 │   ├── seguridad.py        # Hash de contraseñas (scrypt)
 │   ├── migracion.py        # Lectura del JSON viejo e importación
+│   ├── exportar.py         # Informes a CSV y PDF (fpdf2)
 │   ├── servicios/          # Reglas del sistema
 │   │   ├── usuarios.py     # Cuentas y login
 │   │   ├── alumnos.py      # ABM de alumnos
@@ -74,7 +85,7 @@ asistencia-scm-practica1/
 │   │   ├── limites.py      # Límite de faltas y alertas
 │   │   ├── asistencias.py  # Registro, carga manual y cierre del día
 │   │   ├── configuracion.py# Hora límite
-│   │   └── informes.py     # Informe por alumno y dashboard
+│   │   └── informes.py     # Informe por alumno, total por curso y dashboard
 │   └── interfaz/           # Aplicación web (FastAPI)
 │       ├── __init__.py     # crear_app(): rutas, sesión y errores
 │       ├── comun.py        # Plantillas, mensajes, conexión y sesión
