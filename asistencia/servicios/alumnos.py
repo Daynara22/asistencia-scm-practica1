@@ -60,6 +60,13 @@ def buscar_por_dni(conexion, dni):
     return alumno
 
 
+def obtener(conexion, alumno_id):
+    """Devuelve el alumno con ese id, o None si no existe."""
+    fila = conexion.execute(
+        "SELECT * FROM alumnos WHERE id = ?", (alumno_id,)).fetchone()
+    return Alumno.desde_fila(fila) if fila else None
+
+
 def listar(conexion):
     """Lista de alumnos ordenada por apellido y nombre."""
     alumnos = [Alumno.desde_fila(fila) for fila in

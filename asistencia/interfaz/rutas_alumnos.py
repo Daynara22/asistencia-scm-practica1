@@ -4,9 +4,11 @@ from dataclasses import asdict
 from fastapi import APIRouter, Depends, Request
 
 from asistencia.interfaz.comun import (flash, obtener_conexion, pagina,
-                                       redirigir, requiere_docente)
+                                       redirigir, requiere_alumno,
+                                       requiere_docente)
 from asistencia.servicios import alumnos as servicio_alumnos
 from asistencia.servicios import informes
+from asistencia.servicios.alumnos import obtener as obtener_alumno
 from asistencia.validaciones import ErrorValidacion
 
 rutas = APIRouter()
@@ -54,3 +56,14 @@ async def informe(request: Request, dni: str = "",
             codigo = 400
     return pagina(request, "informe.html", codigo, seccion="informe",
                   dni=dni, informe=resultado)
+
+
+@rutas.get("/mi-asistencia", name="mi_asistencia")
+async def mi_asistencia(request: Request,
+                        conexion=Depends(obtener_conexion),
+                        usuario=Depends(requiere_alumno)):
+    """Informe propio del alumno que inició sesión (solo el suyo)."""
+    alumno = obtener_alumno(conexion, usuario.alumno_id)
+    resultado = informes.informe_alumno(conexion, alumno.dni)
+    return pagina(request, "informe.html", seccion="mi_asistencia",
+                  dni=alumno.dni, informe=resultado, propio=True)

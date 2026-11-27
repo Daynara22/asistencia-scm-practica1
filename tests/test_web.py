@@ -130,11 +130,15 @@ def test_con_sesion_el_login_lleva_al_dashboard(cliente):
     assert r.status_code == 302 and r.headers["Location"] == "/"
 
 
-def test_registro_saluda_al_docente_por_su_nombre(anonimo):
-    """Al crear la cuenta queda la sesión iniciada con su nombre."""
+def test_registro_saluda_por_su_nombre(anonimo):
+    """Al crear la cuenta queda la sesión iniciada con su nombre.
+
+    Es la primera cuenta de la base, así que queda como administrador.
+    """
     r = anonimo.post("/registro-docente", data=DOCENTE,
                      follow_redirects=True)
-    assert "Bienvenido docente" in r.text and "María González" in r.text
+    assert "Bienvenido administrador" in r.text
+    assert "María González" in r.text
 
 
 def test_login_correcto_detecta_al_docente(anonimo):
@@ -233,7 +237,7 @@ def test_login_lleva_al_dashboard(anonimo):
     r = anonimo.post("/registro-docente", data=DOCENTE)
     assert r.status_code == 302 and r.headers["Location"] == "/"
     r = anonimo.get("/")
-    assert "Dashboard" in r.text and "Bienvenido docente" in r.text
+    assert "Dashboard" in r.text and "Bienvenido administrador" in r.text
 
 
 def test_dashboard_vacio(cliente):

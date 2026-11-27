@@ -72,6 +72,17 @@ MIGRACIONES = [
         "INSERT INTO configuracion (clave, valor) "
         "VALUES ('hora_limite', '08:15')",
     ],
+    # Versión 2: roles de usuario. Las cuentas existentes quedan como
+    # docentes; una cuenta de alumno se vincula con su alumno.
+    [
+        """
+        ALTER TABLE usuarios ADD COLUMN rol TEXT NOT NULL DEFAULT 'docente'
+            CHECK (rol IN ('administrador', 'docente', 'alumno'))
+        """,
+        "ALTER TABLE usuarios ADD COLUMN alumno_id INTEGER "
+        "REFERENCES alumnos(id)",
+        "CREATE UNIQUE INDEX idx_usuarios_alumno ON usuarios (alumno_id)",
+    ],
 ]
 
 

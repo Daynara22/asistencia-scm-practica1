@@ -15,14 +15,17 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
 from asistencia import bd
-from asistencia.interfaz import rutas_acceso, rutas_alumnos, rutas_asistencia
+from asistencia.interfaz import (rutas_acceso, rutas_alumnos,
+                                 rutas_asistencia, rutas_usuarios)
 from asistencia.interfaz.comun import (CARPETA_ESTATICOS, NoAutenticado,
+                                       SinPermiso,
                                        buscar_usuario_sin_conexion, pagina,
                                        redirigir)
 
 TAMANO_MAXIMO = 16 * 1024          # formularios chicos: máximo 16 KB
 
 MENSAJES_ERROR = {
+    403: "No tenés permiso para entrar a esta página.",
     404: "La página que buscás no existe.",
     405: "Esa acción no está permitida desde acá.",
     413: "Los datos enviados son demasiado grandes.",
@@ -68,6 +71,11 @@ def _registrar_manejadores_de_error(app):
         """Sin sesión iniciada: al login."""
         return redirigir(request, "login")
 
+    @app.exception_handler(SinPermiso)
+    async def sin_permiso(request, error):
+        """Con sesión, pero sin el rol necesario."""
+        return pagina_error(request, 403)
+
     @app.exception_handler(StarletteHTTPException)
     async def error_http(request, error):
         """Errores HTTP (404, 405...)."""
@@ -108,6 +116,7 @@ def crear_app(ruta_bd=None, clave_secreta=None):
     app.include_router(rutas_acceso.rutas)
     app.include_router(rutas_asistencia.rutas)
     app.include_router(rutas_alumnos.rutas)
+    app.include_router(rutas_usuarios.rutas)
     _registrar_manejadores_de_error(app)
 
     # El orden importa: la sesión tiene que envolver a todo lo demás.

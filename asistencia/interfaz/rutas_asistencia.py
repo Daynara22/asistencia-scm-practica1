@@ -9,7 +9,8 @@ from datetime import date, datetime
 from fastapi import APIRouter, Depends, Request
 
 from asistencia.interfaz.comun import (flash, obtener_conexion, pagina,
-                                       redirigir, requiere_docente)
+                                       redirigir, requiere_docente,
+                                       requiere_usuario)
 from asistencia.servicios import asistencias, configuracion, informes
 from asistencia.validaciones import ErrorValidacion
 
@@ -18,8 +19,14 @@ rutas = APIRouter()
 
 @rutas.get("/", name="dashboard")
 async def dashboard(request: Request, conexion=Depends(obtener_conexion),
-                    usuario=Depends(requiere_docente)):
-    """Pantalla de inicio con el resumen del día y el gráfico."""
+                    usuario=Depends(requiere_usuario)):
+    """
+    Pantalla de inicio con el resumen del día y el gráfico.
+
+    Los alumnos no ven el dashboard: su inicio es su propio informe.
+    """
+    if usuario.es_alumno:
+        return redirigir(request, "mi_asistencia")
     hoy = date.today()
     return pagina(
         request, "dashboard.html",

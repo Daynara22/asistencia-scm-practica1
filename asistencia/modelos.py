@@ -13,6 +13,15 @@ TARDANZA = "TARDANZA"
 AUSENTE = "AUSENTE"
 ESTADOS = (PRESENTE, TARDANZA, AUSENTE)
 
+# Roles de usuario y lo que puede hacer cada uno:
+# - administrador: todo, incluida la gestión de cuentas de usuario.
+# - docente: registrar asistencia, alumnos, informes y dashboard.
+# - alumno: solo ver su propio informe de asistencia.
+ADMINISTRADOR = "administrador"
+DOCENTE = "docente"
+ALUMNO = "alumno"
+ROLES = (ADMINISTRADOR, DOCENTE, ALUMNO)
+
 
 def _campos_de_fila(clase, fila):
     """Toma de la fila solo las columnas que existen en la clase."""
@@ -23,13 +32,15 @@ def _campos_de_fila(clase, fila):
 
 @dataclass
 class Usuario:
-    """Cuenta para entrar al sistema (por ahora, siempre un docente)."""
+    """Cuenta para entrar al sistema, con su rol."""
 
     id: int
     email: str
     nombre: str
     apellido: str
     clave_hash: str = ""
+    rol: str = DOCENTE
+    alumno_id: Optional[int] = None     # solo en las cuentas de alumno
 
     @classmethod
     def desde_fila(cls, fila):
@@ -40,6 +51,16 @@ class Usuario:
     def nombre_completo(self):
         """Nombre y apellido juntos, para mostrar en pantalla."""
         return f"{self.nombre} {self.apellido}"
+
+    @property
+    def es_administrador(self):
+        """True si la cuenta es de un administrador."""
+        return self.rol == ADMINISTRADOR
+
+    @property
+    def es_alumno(self):
+        """True si la cuenta es de un alumno."""
+        return self.rol == ALUMNO
 
 
 @dataclass

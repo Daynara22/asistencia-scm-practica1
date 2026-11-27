@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from jinja2 import pass_context
 
 from asistencia import bd
+from asistencia.modelos import ADMINISTRADOR, ALUMNO, DOCENTE
 from asistencia.servicios import usuarios
 
 CARPETA_PROYECTO = os.path.dirname(os.path.dirname(os.path.dirname(
@@ -96,7 +97,7 @@ templates.env.globals.update(url_for=url_for,
 def pagina(request, plantilla, estado_http=200, **contexto):
     """Muestra una plantilla con los datos comunes (usuario logueado y
     versión del CSS)."""
-    contexto.setdefault("docente", getattr(request.state, "usuario", None))
+    contexto.setdefault("usuario", getattr(request.state, "usuario", None))
     contexto["version_estaticos"] = version_estaticos()
     return templates.TemplateResponse(request, plantilla, contexto,
                                       status_code=estado_http)
@@ -130,6 +131,10 @@ class NoAutenticado(Exception):
     """Alguien sin sesión quiso entrar a una página protegida."""
 
 
+class SinPermiso(Exception):
+    """El usuario tiene sesión, pero su rol no permite entrar ahí."""
+
+
 def buscar_usuario(request, conexion):
     """Busca al usuario de la sesión y lo deja en request.state.usuario
     (o None)."""
@@ -161,7 +166,7 @@ def buscar_usuario_sin_conexion(request):
         return None
 
 
-def requiere_docente(request: Request,
+def requiere_usuario(request: Request,
                      conexion=Depends(obtener_conexion)):
     """Dependencia de las páginas protegidas: sin sesión, manda al
     login."""
@@ -169,6 +174,27 @@ def requiere_docente(request: Request,
     if usuario is None:
         raise NoAutenticado()
     return usuario
+
+
+def requiere_rol(*roles):
+    """
+    Crea una dependencia que solo deja pasar a los roles indicados.
+
+    Uso: usuario=Depends(requiere_rol(ADMINISTRADOR))
+    Sin sesión manda al login; con otro rol muestra "sin permiso" (403).
+    """
+    def dependencia(usuario=Depends(requiere_usuario)):
+        """Revisa el rol del usuario de la sesión."""
+        if usuario.rol not in roles:
+            raise SinPermiso()
+        return usuario
+    return dependencia
+
+
+# Dependencias listas para usar en las rutas.
+requiere_docente = requiere_rol(ADMINISTRADOR, DOCENTE)
+requiere_administrador = requiere_rol(ADMINISTRADOR)
+requiere_alumno = requiere_rol(ALUMNO)
 
 
 def iniciar_sesion(request, usuario):
