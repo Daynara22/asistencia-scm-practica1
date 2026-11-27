@@ -1,6 +1,32 @@
+# Bytecode y cachés de Python
 __pycache__/
+*.py[cod]
 .pytest_cache/
-backups/
-datos/
+
+# Entornos virtuales
 venv/
 .venv/
+env/
+
+# Cobertura de tests
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Datos locales (bases de datos y respaldos)
+datos/
+backups/
+*.db
+*.sqlite3
+*.db-wal
+*.db-shm
+
+# Variables de entorno
+.env
+
+# Editores y sistema operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
