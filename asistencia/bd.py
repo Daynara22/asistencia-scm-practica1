@@ -137,6 +137,16 @@ MIGRACIONES = [
         "REFERENCES cursos(id)",
         "CREATE UNIQUE INDEX idx_alumnos_email ON alumnos (email)",
     ],
+    # Versión 4: límite de faltas propio de cada curso (NULL = usa el
+    # límite general) y valores por defecto del límite general.
+    [
+        "ALTER TABLE cursos ADD COLUMN limite_faltas INTEGER "
+        "CHECK (limite_faltas IS NULL OR limite_faltas > 0)",
+        "INSERT OR IGNORE INTO configuracion (clave, valor) "
+        "VALUES ('limite_faltas', '10')",
+        "INSERT OR IGNORE INTO configuracion (clave, valor) "
+        "VALUES ('valor_tardanza', '0')",
+    ],
 ]
 
 

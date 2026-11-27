@@ -141,6 +141,7 @@ class Curso:
     anio: int
     division: str
     docente_id: int
+    limite_faltas: Optional[int] = None     # None = usa el límite general
 
     @classmethod
     def desde_fila(cls, fila):

@@ -105,6 +105,24 @@
   </section>
 
   <div>
+    <section class="tarjeta" id="alertas-faltas">
+      <h2>Alertas de faltas</h2>
+      {% if alertas %}
+        <ol class="ranking">
+          {% for a in alertas %}
+            <li>
+              <a href="{{ url_for('informe', dni=a.dni) }}">{{ a.nombre }}</a>
+              <span class="badge {{ 'badge-ausente' if a.estado == 'superado' else 'badge-tardanza' }} ranking-cantidad"
+                    title="{{ a.mensaje }}">{{ 'Superó' if a.estado == 'superado' else 'Cerca' }} · {{ a.faltas_texto }}/{{ a.limite }}</span>
+            </li>
+          {% endfor %}
+        </ol>
+      {% else %}
+        <p class="vacio">Ningún alumno está cerca del límite de faltas.</p>
+      {% endif %}
+      <p class="nota"><a class="enlace" href="{{ url_for('limites') }}">Límite general: {{ limite_general }} faltas →</a></p>
+    </section>
+
     <section class="tarjeta">
       <h2>Más ausencias</h2>
       {% if resumen.mas_ausencias %}

@@ -11,7 +11,8 @@ from asistencia.interfaz.comun import (flash, obtener_conexion, pagina,
                                        requiere_administrador,
                                        requiere_docente)
 from asistencia.modelos import DIAS
-from asistencia.servicios import cursos, docentes, horarios, materias
+from asistencia.servicios import (cursos, docentes, horarios, limites,
+                                  materias)
 from asistencia.validaciones import ErrorValidacion
 
 rutas = APIRouter()
@@ -27,13 +28,15 @@ def pantalla_cursos(request, conexion, formulario=None, editando=None,
     return pagina(request, "cursos.html", codigo, seccion="cursos",
                   cursos=cursos.listar(conexion),
                   docentes=docentes.listar(conexion),
+                  limite_general=limites.limite_general(conexion),
                   formulario=formulario or {}, editando=editando)
 
 
 def _datos_curso(formulario):
     """Campos del formulario en el orden que piden los servicios."""
     return (formulario.get("nombre"), formulario.get("anio"),
-            formulario.get("division"), formulario.get("docente_id"))
+            formulario.get("division"), formulario.get("docente_id"),
+            formulario.get("limite_faltas"))
 
 
 @rutas.get("/cursos", name="cursos")
@@ -50,7 +53,8 @@ async def lista_cursos(request: Request, editar: str = "",
             return pantalla_cursos(request, conexion, codigo=404)
         formulario = {"nombre": curso.nombre, "anio": str(curso.anio),
                       "division": curso.division,
-                      "docente_id": str(curso.docente_id)}
+                      "docente_id": str(curso.docente_id),
+                      "limite_faltas": str(curso.limite_faltas or "")}
         return pantalla_cursos(request, conexion, formulario, curso)
     return pantalla_cursos(request, conexion)
 

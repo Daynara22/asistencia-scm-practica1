@@ -429,3 +429,6 @@ input:disabled { background: var(--fondo); cursor: not-allowed; }
 }
 .filtro { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .8rem; }
 .texto-suave { color: var(--texto-suave); }
+
+/* ---------- Límite de faltas ---------- */
+.alerta-faltas { margin-bottom: 1rem; }

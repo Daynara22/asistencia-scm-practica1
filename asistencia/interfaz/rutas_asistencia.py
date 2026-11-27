@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, Request
 from asistencia.interfaz.comun import (flash, obtener_conexion, pagina,
                                        redirigir, requiere_docente,
                                        requiere_usuario)
-from asistencia.servicios import asistencias, configuracion, informes
+from asistencia.servicios import (asistencias, configuracion, informes,
+                                  limites)
 from asistencia.validaciones import ErrorValidacion
 
 rutas = APIRouter()
@@ -35,6 +36,8 @@ async def dashboard(request: Request, conexion=Depends(obtener_conexion),
         hora_limite=configuracion.texto_hora_limite(conexion),
         cerrado=asistencias.dia_cerrado(conexion, hoy),
         resumen=informes.resumen_general(conexion, hoy),
+        alertas=limites.alumnos_con_alerta(conexion),
+        limite_general=limites.limite_general(conexion),
     )
 
 

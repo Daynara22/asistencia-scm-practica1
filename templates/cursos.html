@@ -52,6 +52,12 @@
           {% endfor %}
         </select>
       </div>
+      <div class="campo">
+        <label for="limite_faltas">Límite de faltas (opcional)</label>
+        <input id="limite_faltas" name="limite_faltas" type="number" min="1" max="365"
+               placeholder="General: {{ limite_general }}" value="{{ formulario.get('limite_faltas', '') }}">
+      </div>
+      <p class="nota">Si lo dejás vacío, el curso usa el límite general ({{ limite_general }} faltas).</p>
       <div class="form-acciones">
         <button type="submit" class="boton boton-principal">{{ 'Guardar cambios' if editando else 'Dar de alta' }}</button>
         {% if editando %}
@@ -69,13 +75,14 @@
       <div class="tabla-contenedor">
         <table class="tabla">
           <thead>
-            <tr><th>Curso</th><th>Docente a cargo</th><th>Alumnos</th><th>Horarios</th><th></th></tr>
+            <tr><th>Curso</th><th>Docente a cargo</th><th>Límite de faltas</th><th>Alumnos</th><th>Horarios</th><th></th></tr>
           </thead>
           <tbody>
             {% for c in cursos %}
               <tr>
                 <td>{{ c.nombre_completo }}</td>
                 <td>{{ c.docente }}</td>
+                <td>{{ c.limite_faltas if c.limite_faltas else limite_general ~ ' (general)' }}</td>
                 <td><a class="enlace" href="{{ url_for('alumnos', curso=c.id) }}">{{ c.alumnos }}</a></td>
                 <td><a class="enlace" href="{{ url_for('horarios', curso=c.id) }}">{{ c.horarios }}</a></td>
                 <td>

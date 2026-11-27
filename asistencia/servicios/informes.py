@@ -7,7 +7,7 @@ El porcentaje de asistencia cuenta PRESENTE y TARDANZA como asistió
 from datetime import date, datetime
 
 from asistencia.modelos import AUSENTE, PRESENTE, TARDANZA
-from asistencia.servicios import alumnos
+from asistencia.servicios import alumnos, limites
 from asistencia.servicios.asistencias import resumen_del_dia
 
 DIAS_SEMANA = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
@@ -61,6 +61,8 @@ def informe_alumno(conexion, dni):
         "porcentaje_tardanzas": porcentaje(cuenta[TARDANZA], total),
         "porcentaje_ausentes": porcentaje(cuenta[AUSENTE], total),
         "detalle": detalle,
+        # Faltas, límite y estado (normal, cerca o superado).
+        "situacion": limites.situacion_alumno(conexion, alumno),
     }
 
 

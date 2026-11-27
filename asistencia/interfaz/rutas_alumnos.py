@@ -11,7 +11,7 @@ from asistencia.interfaz.comun import (flash, obtener_conexion, pagina,
                                        requiere_administrador,
                                        requiere_alumno, requiere_docente)
 from asistencia.servicios import alumnos as servicio_alumnos
-from asistencia.servicios import cursos, informes
+from asistencia.servicios import cursos, informes, limites
 from asistencia.servicios.alumnos import obtener as obtener_alumno
 from asistencia.validaciones import ErrorValidacion
 
@@ -24,10 +24,12 @@ def pantalla_alumnos(request, conexion, formulario=None, editando=None,
     lista_cursos = cursos.listar(conexion)
     nombres_cursos = {c["id"]: c["nombre_completo"] for c in lista_cursos}
     porcentajes = informes.porcentajes_por_alumno(conexion)
+    situaciones = limites.situacion_de_todos(conexion)
     lista = [{"id": a.id, "dni": a.dni, "nombre": a.nombre,
               "apellido": a.apellido, "email": a.email,
               "curso": nombres_cursos.get(a.curso_id),
-              "porcentaje": porcentajes.get(a.id)}
+              "porcentaje": porcentajes.get(a.id),
+              "situacion": situaciones[a.id]}
              for a in servicio_alumnos.listar(conexion, curso_id)]
     return pagina(request, "alumnos.html", codigo, seccion="alumnos",
                   alumnos=lista, cursos=lista_cursos,

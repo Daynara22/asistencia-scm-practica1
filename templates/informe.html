@@ -37,6 +37,19 @@
       </div>
     </div>
 
+    {% set s = informe.situacion %}
+    {% if s.estado == 'superado' %}
+      <div class="mensaje mensaje-error alerta-faltas" role="alert">
+        <span class="mensaje-icono" aria-hidden="true">✕</span>
+        <span class="mensaje-texto"><strong>Límite superado.</strong> {{ s.mensaje }}</span>
+      </div>
+    {% elif s.estado == 'cerca' %}
+      <div class="mensaje mensaje-aviso alerta-faltas" role="alert">
+        <span class="mensaje-icono" aria-hidden="true">!</span>
+        <span class="mensaje-texto"><strong>Atención.</strong> {{ s.mensaje }} Le quedan {{ s.restantes }}.</span>
+      </div>
+    {% endif %}
+
     <div class="contadores contadores-informe">
       <div class="contador contador-presente">
         <span class="contador-numero">{{ informe.presentes }}</span>
@@ -53,6 +66,10 @@
       <div class="contador contador-total">
         <span class="contador-numero">{{ informe.porcentaje_asistencia }} %</span>
         <span class="contador-texto">Asistencia</span>
+      </div>
+      <div class="contador {{ 'contador-ausente' if s.estado == 'superado' else 'contador-tardanza' if s.estado == 'cerca' else 'contador-presente' }}">
+        <span class="contador-numero">{{ s.faltas_texto }} / {{ s.limite }}</span>
+        <span class="contador-texto">Faltas · {{ s.porcentaje_limite }} % del límite</span>
       </div>
     </div>
 

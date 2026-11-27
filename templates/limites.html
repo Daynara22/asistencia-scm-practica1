@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block titulo %}Límite de faltas{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Límite de faltas</h1>
+    <p class="subtitulo">Se avisa cuando un alumno llega al {{ umbral }} % del límite y cuando lo supera.</p>
+  </div>
+</section>
+
+<div class="grilla grilla-alumnos">
+  <section class="tarjeta">
+    <h2>Límite general</h2>
+    {% if usuario.es_administrador %}
+    <form method="post" action="{{ url_for('guardar_limites') }}" class="form-columna">
+      <div class="campo">
+        <label for="limite_faltas">Faltas permitidas</label>
+        <input id="limite_faltas" name="limite_faltas" type="number" min="1" max="365"
+               value="{{ formulario.get('limite_faltas', '') }}" required>
+      </div>
+      <div class="campo">
+        <label for="valor_tardanza">Cada tardanza suma</label>
+        <select id="valor_tardanza" name="valor_tardanza">
+          {% for valor, texto in valores_tardanza.items() %}
+            <option value="{{ valor }}" {{ 'selected' if formulario.get('valor_tardanza') == valor else '' }}>{{ texto }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="boton boton-principal boton-ancho">Guardar</button>
+    </form>
+    {% else %}
+      <p><strong>{{ limite_general }}</strong> faltas permitidas. Cada tardanza: {{ valores_tardanza[formulario.get('valor_tardanza')]|lower }}.</p>
+      <p class="nota">Solo un administrador puede cambiarlo.</p>
+    {% endif %}
+    <p class="nota">Cada ausencia es una falta. Los cursos pueden tener su propio límite: se configura en
+      <a class="enlace" href="{{ url_for('cursos') }}">Cursos</a>.</p>
+
+    {% if cursos %}
+      <h2>Por curso</h2>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead><tr><th>Curso</th><th>Límite</th></tr></thead>
+          <tbody>
+            {% for c in cursos %}
+              <tr>
+                <td>{{ c.nombre_completo }}</td>
+                <td>{{ c.limite_faltas if c.limite_faltas else limite_general ~ ' (general)' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="tarjeta">
+    <h2>Alumnos con alerta</h2>
+    {% if alertas %}
+      <div class="tabla-contenedor">
+        <table class="tabla" id="tabla-alertas">
+          <thead><tr><th>Alumno</th><th>Faltas</th><th>Estado</th><th></th></tr></thead>
+          <tbody>
+            {% for a in alertas %}
+              <tr>
+                <td>{{ a.nombre }}</td>
+                <td>{{ a.faltas_texto }} / {{ a.limite }} ({{ a.porcentaje_limite }} %)</td>
+                <td><span class="badge {{ 'badge-ausente' if a.estado == 'superado' else 'badge-tardanza' }}">{{ 'Superó el límite' if a.estado == 'superado' else 'Cerca del límite' }}</span></td>
+                <td><a class="enlace" href="{{ url_for('informe', dni=a.dni) }}">Ver informe →</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="vacio">Ningún alumno está cerca del límite de faltas.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -1,8 +1,9 @@
 """
 cursos.py - ABM (alta, baja y modificación) de cursos.
 
-Un curso tiene nombre, año (1 a 7), división y un docente a cargo. No
-puede haber dos cursos con el mismo nombre, año y división.
+Un curso tiene nombre, año (1 a 7), división, un docente a cargo y,
+opcionalmente, su propio límite de faltas (si no tiene, usa el general).
+No puede haber dos cursos con el mismo nombre, año y división.
 """
 from asistencia.bd import transaccion
 from asistencia.modelos import Curso
@@ -13,6 +14,15 @@ from asistencia.validaciones import (ErrorValidacion, validar_division,
 
 ANIO_MINIMO = 1
 ANIO_MAXIMO = 7
+LIMITE_MAXIMO = 365
+
+
+def _validar_limite(texto):
+    """Límite de faltas propio del curso; vacío = usa el general
+    (None)."""
+    if not str(texto or "").strip():
+        return None
+    return validar_entero(texto, "el límite de faltas", 1, LIMITE_MAXIMO)
 
 
 def _validar(conexion, nombre, anio, division, docente_id):
@@ -37,31 +47,34 @@ def _revisar_repetido(conexion, nombre, anio, division, propio_id=None):
             f"Ya existe el curso {nombre} {anio}° {division}.")
 
 
-def alta(conexion, nombre, anio, division, docente_id):
+def alta(conexion, nombre, anio, division, docente_id, limite_faltas=""):
     """Da de alta un curso y lo devuelve."""
     nombre, anio, division, docente = _validar(conexion, nombre, anio,
                                                division, docente_id)
+    limite = _validar_limite(limite_faltas)
     with transaccion(conexion):
         _revisar_repetido(conexion, nombre, anio, division)
         curso_id = conexion.execute(
-            "INSERT INTO cursos (nombre, anio, division, docente_id) "
-            "VALUES (?, ?, ?, ?)",
-            (nombre, anio, division, docente.id)).lastrowid
-    return Curso(curso_id, nombre, anio, division, docente.id)
+            "INSERT INTO cursos (nombre, anio, division, docente_id, "
+            "limite_faltas) VALUES (?, ?, ?, ?, ?)",
+            (nombre, anio, division, docente.id, limite)).lastrowid
+    return Curso(curso_id, nombre, anio, division, docente.id, limite)
 
 
-def modificar(conexion, curso_id, nombre, anio, division, docente_id):
+def modificar(conexion, curso_id, nombre, anio, division, docente_id,
+              limite_faltas=""):
     """Cambia los datos de un curso y lo devuelve actualizado."""
     curso = buscar(conexion, curso_id)
     nombre, anio, division, docente = _validar(conexion, nombre, anio,
                                                division, docente_id)
+    limite = _validar_limite(limite_faltas)
     with transaccion(conexion):
         _revisar_repetido(conexion, nombre, anio, division, curso.id)
         conexion.execute(
             "UPDATE cursos SET nombre = ?, anio = ?, division = ?, "
-            "docente_id = ? WHERE id = ?",
-            (nombre, anio, division, docente.id, curso.id))
-    return Curso(curso.id, nombre, anio, division, docente.id)
+            "docente_id = ?, limite_faltas = ? WHERE id = ?",
+            (nombre, anio, division, docente.id, limite, curso.id))
+    return Curso(curso.id, nombre, anio, division, docente.id, limite)
 
 
 def eliminar(conexion, curso_id):
