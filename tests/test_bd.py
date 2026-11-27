@@ -7,7 +7,7 @@ import pytest
 
 from asistencia import bd
 from asistencia.servicios import alumnos, asistencias
-from tests.conftest import a_las
+from tests.conftest import a_las, alta_alumno, crear_curso
 
 
 def test_esquema_se_crea_con_la_version_actual(conexion):
@@ -73,8 +73,9 @@ def test_registros_simultaneos_de_varios_usuarios(tmp_path):
     ruta = str(tmp_path / "prueba.db")
     dnis = [str(40000000 + i) for i in range(10)]
     with closing(bd.conectar(ruta)) as conexion:
+        crear_curso(conexion)
         for dni in dnis:
-            alumnos.alta(conexion, dni, "Alumno", "Prueba")
+            alta_alumno(conexion, dni, "Alumno", "Prueba")
 
     errores = []
 

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block titulo %}Docentes{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Docentes</h1>
+    <p class="subtitulo">{{ docentes|length }} docente{{ '' if docentes|length == 1 else 's' }}</p>
+  </div>
+</section>
+
+<div class="grilla grilla-alumnos">
+  {% if usuario.es_administrador %}
+  <section class="tarjeta">
+    {% if editando %}
+      <span class="etiqueta-edicion">Editando</span>
+      <h2>{{ editando.nombre_completo }}</h2>
+    {% else %}
+      <h2>Alta de docente</h2>
+    {% endif %}
+    <form method="post"
+          action="{{ url_for('modificar_docente', id=editando.id) if editando else url_for('alta_docente') }}"
+          class="form-columna">
+      <div class="campo">
+        <label for="dni">DNI</label>
+        <input id="dni" name="dni" type="text" class="solo-numeros" inputmode="numeric"
+               maxlength="10" placeholder="7 u 8 dígitos" value="{{ formulario.get('dni', '') }}"
+               autocomplete="off" required>
+      </div>
+      <div class="campo">
+        <label for="nombre">Nombre</label>
+        <input id="nombre" name="nombre" type="text" maxlength="50"
+               value="{{ formulario.get('nombre', '') }}" required>
+      </div>
+      <div class="campo">
+        <label for="apellido">Apellido</label>
+        <input id="apellido" name="apellido" type="text" maxlength="50"
+               value="{{ formulario.get('apellido', '') }}" required>
+      </div>
+      <div class="campo">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" maxlength="254"
+               value="{{ formulario.get('email', '') }}" autocomplete="off" required>
+      </div>
+      <div class="campo">
+        <label for="materias">Materias (separadas por comas)</label>
+        <input id="materias" name="materias" type="text" maxlength="500" list="lista-materias"
+               placeholder="Matemática, Física" value="{{ formulario.get('materias', '') }}" required>
+        <datalist id="lista-materias">
+          {% for m in materias %}<option value="{{ m }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="form-acciones">
+        <button type="submit" class="boton boton-principal">{{ 'Guardar cambios' if editando else 'Dar de alta' }}</button>
+        {% if editando %}
+          <a class="boton boton-secundario" href="{{ url_for('docentes') }}">Cancelar</a>
+        {% endif %}
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  <section class="tarjeta">
+    <h2>Listado</h2>
+    {% if docentes %}
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Docente</th><th>DNI</th><th>Email</th><th>Materias</th><th>Cursos</th>{% if usuario.es_administrador %}<th></th>{% endif %}</tr>
+          </thead>
+          <tbody>
+            {% for d in docentes %}
+              <tr>
+                <td>{{ d.apellido }}, {{ d.nombre }}</td>
+                <td>{{ d.dni }}</td>
+                <td>{{ d.email }}{% if d.tiene_cuenta %} <span class="texto-suave">· con cuenta</span>{% endif %}</td>
+                <td>{{ d.materias|join(', ') }}</td>
+                <td>{{ d.cursos }}</td>
+                {% if usuario.es_administrador %}
+                <td>
+                  <div class="acciones-fila">
+                    <a class="boton boton-secundario boton-chico" href="{{ url_for('docentes', editar=d.id) }}">Editar</a>
+                    <form method="post" action="{{ url_for('eliminar_docente', id=d.id) }}">
+                      <button type="submit" class="boton boton-peligro boton-chico"
+                              data-confirmar="¿Seguro? Tocá de nuevo">Dar de baja</button>
+                    </form>
+                  </div>
+                </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="nota">"Con cuenta" indica que hay un usuario del sistema con el mismo email.</p>
+    {% else %}
+      <p class="vacio">Todavía no hay docentes cargados.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

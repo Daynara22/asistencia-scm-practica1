@@ -83,6 +83,60 @@ MIGRACIONES = [
         "REFERENCES alumnos(id)",
         "CREATE UNIQUE INDEX idx_usuarios_alumno ON usuarios (alumno_id)",
     ],
+    # Versión 3: docentes, materias, cursos y horarios. Los alumnos suman
+    # email y curso (opcionales para los alumnos que ya existían).
+    [
+        """
+        CREATE TABLE docentes (
+            id       INTEGER PRIMARY KEY,
+            dni      TEXT NOT NULL UNIQUE,
+            nombre   TEXT NOT NULL,
+            apellido TEXT NOT NULL,
+            email    TEXT NOT NULL UNIQUE
+        )
+        """,
+        """
+        CREATE TABLE materias (
+            id     INTEGER PRIMARY KEY,
+            nombre TEXT NOT NULL UNIQUE COLLATE NOCASE
+        )
+        """,
+        """
+        CREATE TABLE docente_materias (
+            docente_id INTEGER NOT NULL
+                       REFERENCES docentes(id) ON DELETE CASCADE,
+            materia_id INTEGER NOT NULL REFERENCES materias(id),
+            PRIMARY KEY (docente_id, materia_id)
+        )
+        """,
+        """
+        CREATE TABLE cursos (
+            id         INTEGER PRIMARY KEY,
+            nombre     TEXT NOT NULL,
+            anio       INTEGER NOT NULL CHECK (anio BETWEEN 1 AND 7),
+            division   TEXT NOT NULL,
+            docente_id INTEGER NOT NULL REFERENCES docentes(id),
+            UNIQUE (nombre, anio, division)
+        )
+        """,
+        """
+        CREATE TABLE horarios (
+            id          INTEGER PRIMARY KEY,
+            curso_id    INTEGER NOT NULL
+                        REFERENCES cursos(id) ON DELETE CASCADE,
+            dia         INTEGER NOT NULL CHECK (dia BETWEEN 0 AND 6),
+            hora_inicio TEXT NOT NULL,
+            hora_fin    TEXT NOT NULL,
+            materia_id  INTEGER NOT NULL REFERENCES materias(id),
+            CHECK (hora_inicio < hora_fin)
+        )
+        """,
+        "CREATE INDEX idx_horarios_curso_dia ON horarios (curso_id, dia)",
+        "ALTER TABLE alumnos ADD COLUMN email TEXT",
+        "ALTER TABLE alumnos ADD COLUMN curso_id INTEGER "
+        "REFERENCES cursos(id)",
+        "CREATE UNIQUE INDEX idx_alumnos_email ON alumnos (email)",
+    ],
 ]
 
 

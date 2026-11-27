@@ -16,7 +16,12 @@ PATRON_NOMBRE = re.compile(r"[^\W\d_]+(?:[ '\-][^\W\d_]+)*")
 PATRON_EMAIL = re.compile(
     r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}")
 
+# Nombres de materias y cursos: letras, números y algunos signos
+# (por ejemplo "Programación III" o "Matemática 2").
+PATRON_TEXTO = re.compile(r"[^\W_]+(?:(?:[ '\-]|\. ?)[^\W_]+)*\.?")
+
 LARGO_MAXIMO_NOMBRE = 50
+LARGO_MAXIMO_TEXTO = 60
 CLAVE_MINIMO = 8
 CLAVE_MAXIMO = 128
 
@@ -133,3 +138,85 @@ def validar_hora(texto):
         return datetime.strptime(texto, "%H:%M").time()
     except ValueError:
         raise ErrorValidacion(f"La hora {texto} no es válida.")
+
+
+def validar_texto(texto, campo, largo_maximo=LARGO_MAXIMO_TEXTO):
+    """
+    Valida un nombre de materia o de curso y lo devuelve prolijo.
+
+    Admite letras, números, espacios, puntos, guiones y apóstrofos.
+    Solo se pone en mayúscula la primera letra ('programación III' ->
+    'Programación III').
+    """
+    limpio = " ".join(str(texto or "").split())
+    if not limpio:
+        raise ErrorValidacion(f"El campo {campo} no puede estar vacío.")
+    if len(limpio) > largo_maximo:
+        raise ErrorValidacion(
+            f"El campo {campo} no puede tener más de {largo_maximo} "
+            "caracteres.")
+    if not PATRON_TEXTO.fullmatch(limpio):
+        raise ErrorValidacion(
+            f"El campo {campo} solo puede tener letras, números, espacios, "
+            "puntos o guiones.")
+    return limpio[0].upper() + limpio[1:]
+
+
+def validar_entero(texto, campo, minimo, maximo):
+    """Convierte el texto en un número entero entre minimo y maximo."""
+    texto = str(texto if texto is not None else "").strip()
+    if not texto:
+        raise ErrorValidacion(f"Ingresá {campo}.")
+    if not re.fullmatch(r"-?[0-9]+", texto):
+        raise ErrorValidacion(f"El campo {campo} debe ser un número.")
+    numero = int(texto)
+    if not minimo <= numero <= maximo:
+        raise ErrorValidacion(
+            f"El campo {campo} debe estar entre {minimo} y {maximo}.")
+    return numero
+
+
+def validar_division(texto):
+    """La división del curso: 1 a 3 letras o números ('A', '2', '1B')."""
+    division = str(texto or "").strip().upper()
+    if not division:
+        raise ErrorValidacion("Ingresá la división.")
+    if not re.fullmatch(r"[A-Z0-9]{1,3}", division):
+        raise ErrorValidacion(
+            "La división debe tener de 1 a 3 letras o números "
+            "(por ejemplo A o 2).")
+    return division
+
+
+def validar_materias(texto):
+    """
+    Convierte 'Matemática, Física' en ['Matemática', 'Física'].
+
+    Pide al menos una materia y quita las repetidas.
+    """
+    materias = []
+    for parte in str(texto or "").split(","):
+        if parte.strip():
+            materia = validar_texto(parte, "materia")
+            if materia.casefold() not in (m.casefold() for m in materias):
+                materias.append(materia)
+    if not materias:
+        raise ErrorValidacion(
+            "Ingresá al menos una materia (separadas por comas).")
+    return materias
+
+
+def validar_id(texto, que):
+    """
+    Convierte el id que llega de un formulario o de la dirección en int.
+
+    'que' describe lo buscado ('El curso', 'El docente'...) para el
+    mensaje de error.
+    """
+    try:
+        numero = int(str(texto).strip())
+    except (TypeError, ValueError):
+        raise ErrorValidacion(f"{que} indicado no existe.")
+    if numero <= 0:
+        raise ErrorValidacion(f"{que} indicado no existe.")
+    return numero

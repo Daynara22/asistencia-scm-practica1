@@ -16,7 +16,8 @@ from asistencia.modelos import ADMINISTRADOR, ALUMNO, DOCENTE
 from asistencia.servicios import alumnos, asistencias, usuarios
 from asistencia.validaciones import ErrorValidacion
 from tests.conftest import (CLAVE, DOCENTE as DATOS_DOCENTE, EMAIL_ALUMNO,
-                            OTRO_DOCENTE, a_las)
+                            OTRO_DOCENTE, a_las, alta_alumno, crear_curso,
+                            datos_alumno)
 
 PANTALLAS_DE_DOCENTE = ["/", "/asistencia", "/alumnos", "/informe"]
 ENVIOS_DE_DOCENTE = ["/registrar", "/manual", "/hora-limite", "/cerrar-dia",
@@ -37,7 +38,8 @@ def con_cuentas(conexion):
     """Base con un administrador, un docente y un alumno sin cuenta."""
     registrar(conexion, DATOS_DOCENTE)
     registrar(conexion, OTRO_DOCENTE)
-    alumnos.alta(conexion, "45123456", "Juan", "Pérez")
+    crear_curso(conexion)
+    alta_alumno(conexion, "45123456", "Juan", "Pérez")
     return conexion
 
 
@@ -241,8 +243,7 @@ def test_informe_del_alumno_muestra_sus_datos(cliente_alumno, ruta_memoria):
 
 def test_pantalla_usuarios_crea_cuenta_de_alumno(cliente):
     """Desde Usuarios, el administrador crea la cuenta de un alumno."""
-    cliente.post("/alumnos", data={"dni": "40111222", "nombre": "Ana",
-                                   "apellido": "Díaz"})
+    cliente.post("/alumnos", data=datos_alumno("40111222", "Ana", "Díaz"))
     r = cliente.post("/usuarios/alumno",
                      data={"dni": "40111222", "email": "ana@alumnos.edu.ar",
                            "clave": CLAVE, "clave_repetida": CLAVE},
@@ -253,8 +254,7 @@ def test_pantalla_usuarios_crea_cuenta_de_alumno(cliente):
 
 def test_pantalla_usuarios_muestra_errores(cliente):
     """Si los datos de la cuenta no sirven, se explica por qué."""
-    cliente.post("/alumnos", data={"dni": "40111222", "nombre": "Ana",
-                                   "apellido": "Díaz"})
+    cliente.post("/alumnos", data=datos_alumno("40111222", "Ana", "Díaz"))
     r = cliente.post("/usuarios/alumno",
                      data={"dni": "40111222", "email": "ana@",
                            "clave": CLAVE, "clave_repetida": CLAVE})

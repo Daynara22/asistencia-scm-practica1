@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block titulo %}Cursos{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Cursos</h1>
+    <p class="subtitulo">{{ cursos|length }} curso{{ '' if cursos|length == 1 else 's' }}</p>
+  </div>
+</section>
+
+<div class="grilla grilla-alumnos">
+  {% if usuario.es_administrador %}
+  <section class="tarjeta">
+    {% if editando %}
+      <span class="etiqueta-edicion">Editando</span>
+      <h2>{{ editando.nombre_completo }}</h2>
+    {% else %}
+      <h2>Alta de curso</h2>
+    {% endif %}
+
+    {% if not docentes %}
+      <p class="vacio">Para crear un curso primero cargá al docente a cargo.
+        <a class="enlace" href="{{ url_for('docentes') }}">Ir a Docentes →</a></p>
+    {% else %}
+    <form method="post"
+          action="{{ url_for('modificar_curso', id=editando.id) if editando else url_for('alta_curso') }}"
+          class="form-columna">
+      <div class="campo">
+        <label for="nombre">Nombre</label>
+        <input id="nombre" name="nombre" type="text" maxlength="60"
+               placeholder="Técnico en Programación" value="{{ formulario.get('nombre', '') }}" required>
+      </div>
+      <div class="form-grilla">
+        <div class="campo">
+          <label for="anio">Año</label>
+          <input id="anio" name="anio" type="number" min="1" max="7"
+                 value="{{ formulario.get('anio', '') }}" required>
+        </div>
+        <div class="campo">
+          <label for="division">División</label>
+          <input id="division" name="division" type="text" maxlength="3"
+                 placeholder="A" value="{{ formulario.get('division', '') }}" required>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="docente_id">Docente a cargo</label>
+        <select id="docente_id" name="docente_id" required>
+          <option value="">Elegí un docente</option>
+          {% for d in docentes %}
+            <option value="{{ d.id }}" {{ 'selected' if formulario.get('docente_id') == d.id|string else '' }}>{{ d.apellido }}, {{ d.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-acciones">
+        <button type="submit" class="boton boton-principal">{{ 'Guardar cambios' if editando else 'Dar de alta' }}</button>
+        {% if editando %}
+          <a class="boton boton-secundario" href="{{ url_for('cursos') }}">Cancelar</a>
+        {% endif %}
+      </div>
+    </form>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="tarjeta">
+    <h2>Listado</h2>
+    {% if cursos %}
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Curso</th><th>Docente a cargo</th><th>Alumnos</th><th>Horarios</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for c in cursos %}
+              <tr>
+                <td>{{ c.nombre_completo }}</td>
+                <td>{{ c.docente }}</td>
+                <td><a class="enlace" href="{{ url_for('alumnos', curso=c.id) }}">{{ c.alumnos }}</a></td>
+                <td><a class="enlace" href="{{ url_for('horarios', curso=c.id) }}">{{ c.horarios }}</a></td>
+                <td>
+                  {% if usuario.es_administrador %}
+                  <div class="acciones-fila">
+                    <a class="boton boton-secundario boton-chico" href="{{ url_for('cursos', editar=c.id) }}">Editar</a>
+                    <form method="post" action="{{ url_for('eliminar_curso', id=c.id) }}">
+                      <button type="submit" class="boton boton-peligro boton-chico"
+                              data-confirmar="¿Seguro? Se borran sus horarios">Dar de baja</button>
+                    </form>
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="vacio">Todavía no hay cursos.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

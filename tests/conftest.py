@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from asistencia import bd, seguridad
 from asistencia.interfaz import crear_app
-from asistencia.servicios import alumnos
+from asistencia.servicios import alumnos, cursos, docentes
 
 HOY = date(2026, 11, 6)
 
@@ -30,7 +30,39 @@ DOCENTE = {
 OTRO_DOCENTE = {**DOCENTE, "email": "pedro.ruiz@escuela.edu.ar",
                 "nombre": "Pedro", "apellido": "Ruiz"}
 
-ALUMNO = {"dni": "45123456", "nombre": "Juan", "apellido": "Pérez"}
+# Docente y curso que se crean en todas las bases de prueba, porque para
+# dar de alta un alumno hace falta un curso.
+CURSO_ID = 1
+
+
+def datos_alumno(dni, nombre, apellido, curso_id=CURSO_ID):
+    """Datos del formulario de alta de un alumno (con email y curso)."""
+    return {"dni": dni, "nombre": nombre, "apellido": apellido,
+            "email": f"{dni}@alumnos.edu.ar", "curso_id": str(curso_id)}
+
+
+def crear_curso(conexion, nombre="Programación", division="A"):
+    """Crea un docente (si no hay) y un curso a su cargo. Devuelve el
+    curso."""
+    fila = conexion.execute("SELECT id FROM docentes LIMIT 1").fetchone()
+    if fila:
+        docente_id = fila["id"]
+    else:
+        docente_id = docentes.alta(conexion, "30111222", "Laura", "Sosa",
+                                   "laura.sosa@escuela.edu.ar",
+                                   "Matemática, Física").id
+    return cursos.alta(conexion, nombre, 3, division, docente_id)
+
+
+def alta_alumno(conexion, dni, nombre, apellido, curso_id=CURSO_ID):
+    """Da de alta un alumno con email y curso de prueba."""
+    datos = datos_alumno(dni, nombre, apellido, curso_id)
+    return alumnos.alta(conexion, datos["dni"], datos["nombre"],
+                        datos["apellido"], datos["email"],
+                        datos["curso_id"])
+
+
+ALUMNO = datos_alumno("45123456", "Juan", "Pérez")
 EMAIL_ALUMNO = "juan.perez@alumnos.edu.ar"
 
 
@@ -59,11 +91,18 @@ def conexion():
 
 
 @pytest.fixture
-def con_alumnos(conexion):
-    """Base en memoria con dos alumnos y la hora límite en 08:15."""
-    alumnos.alta(conexion, "45123456", "juan", "pérez")
-    alumnos.alta(conexion, "1234567", "Ana", "Gómez")
+def con_curso(conexion):
+    """Base en memoria con un docente y un curso (id CURSO_ID)."""
+    crear_curso(conexion)
     return conexion
+
+
+@pytest.fixture
+def con_alumnos(con_curso):
+    """Base en memoria con dos alumnos y la hora límite en 08:15."""
+    alta_alumno(con_curso, "45123456", "juan", "pérez")
+    alta_alumno(con_curso, "1234567", "Ana", "Gómez")
+    return con_curso
 
 
 @pytest.fixture
@@ -91,14 +130,21 @@ def anonimo(ruta_memoria):
 
 
 @pytest.fixture
-def cliente(anonimo):
-    """Cliente web con un docente registrado y la sesión iniciada."""
+def cliente(anonimo, ruta_memoria):
+    """
+    Cliente web con sesión de administrador (la primera cuenta).
+
+    La base ya tiene un docente y un curso, para poder dar de alta
+    alumnos.
+    """
     anonimo.post("/registro-docente", data=DOCENTE)
+    with closing(bd.conectar(ruta_memoria)) as conexion:
+        crear_curso(conexion)
     return anonimo
 
 
 @pytest.fixture
-def cliente_docente(anonimo):
+def cliente_docente(anonimo, ruta_memoria):
     """
     Cliente web con sesión de docente (sin permisos de administrador).
 
@@ -108,6 +154,8 @@ def cliente_docente(anonimo):
     anonimo.post("/registro-docente", data=DOCENTE)
     anonimo.post("/logout")
     anonimo.post("/registro-docente", data=OTRO_DOCENTE)
+    with closing(bd.conectar(ruta_memoria)) as conexion:
+        crear_curso(conexion)
     return anonimo
 
 

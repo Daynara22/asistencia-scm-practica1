@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from asistencia import bd
 from asistencia.interfaz import crear_app
-from tests.conftest import DOCENTE
+from tests.conftest import DOCENTE, datos_alumno
 
 RUTAS_PROTEGIDAS = ["/", "/asistencia", "/alumnos", "/informe"]
 
@@ -21,8 +21,8 @@ def test_paginas_abren(cliente, ruta):
 
 def test_flujo_completo(cliente):
     """Alta de alumno, registro, cierre del día e informe."""
-    r = cliente.post("/alumnos", data={"dni": "45123456", "nombre": "Juan",
-                                       "apellido": "Pérez"},
+    juan = datos_alumno("45123456", "Juan", "Pérez")
+    r = cliente.post("/alumnos", data=juan,
                      follow_redirects=True)
     assert "Se dio de alta a Juan Pérez" in r.text
 
@@ -43,8 +43,7 @@ def test_flujo_completo(cliente):
 
 def test_carga_manual_y_hora_limite(cliente):
     """La carga manual y el cambio de hora límite muestran su mensaje."""
-    cliente.post("/alumnos", data={"dni": "45123456", "nombre": "Juan",
-                                   "apellido": "Pérez"})
+    cliente.post("/alumnos", data=datos_alumno("45123456", "Juan", "Pérez"))
     r = cliente.post("/hora-limite", data={"hora_limite": "07:30"},
                      follow_redirects=True)
     assert "Hora límite actualizada a las 07:30" in r.text
@@ -249,10 +248,8 @@ def test_dashboard_vacio(cliente):
 
 def test_dashboard_muestra_grafico_y_ranking(cliente):
     """Con registros aparecen el gráfico, el ranking y el porcentaje."""
-    cliente.post("/alumnos", data={"dni": "45123456", "nombre": "Juan",
-                                   "apellido": "Pérez"})
-    cliente.post("/alumnos", data={"dni": "40111222", "nombre": "Ana",
-                                   "apellido": "Díaz"})
+    cliente.post("/alumnos", data=datos_alumno("45123456", "Juan", "Pérez"))
+    cliente.post("/alumnos", data=datos_alumno("40111222", "Ana", "Díaz"))
     cliente.post("/registrar", data={"dni": "45123456"})
     cliente.post("/cerrar-dia")      # Ana queda AUSENTE
 

@@ -40,6 +40,9 @@
           <a href="{{ url_for('dashboard') }}" class="{{ 'activo' if seccion == 'dashboard' else '' }}">Dashboard</a>
           <a href="{{ url_for('asistencia') }}" class="{{ 'activo' if seccion == 'registro' else '' }}">Registrar asistencia</a>
           <a href="{{ url_for('alumnos') }}" class="{{ 'activo' if seccion == 'alumnos' else '' }}">Alumnos</a>
+          <a href="{{ url_for('docentes') }}" class="{{ 'activo' if seccion == 'docentes' else '' }}">Docentes</a>
+          <a href="{{ url_for('cursos') }}" class="{{ 'activo' if seccion == 'cursos' else '' }}">Cursos</a>
+          <a href="{{ url_for('horarios') }}" class="{{ 'activo' if seccion == 'horarios' else '' }}">Horarios</a>
           <a href="{{ url_for('informe') }}" class="{{ 'activo' if seccion == 'informe' else '' }}">Informe</a>
           {% endif %}
           {% if usuario.es_administrador %}

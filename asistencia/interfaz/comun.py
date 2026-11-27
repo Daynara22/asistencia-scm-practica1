@@ -16,6 +16,7 @@ from jinja2 import pass_context
 from asistencia import bd
 from asistencia.modelos import ADMINISTRADOR, ALUMNO, DOCENTE
 from asistencia.servicios import usuarios
+from asistencia.validaciones import ErrorValidacion
 
 CARPETA_PROYECTO = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
@@ -54,25 +55,30 @@ def get_flashed_messages(contexto, with_categories=False):
 # Direcciones y respuestas
 # ----------------------------------------------------------------------
 
-def ruta_de(request, nombre, **parametros):
+def ruta_de(request, nombre, id=None, **parametros):
     """
     Arma la dirección de una página por su nombre.
 
     ruta_de(request, 'static', filename='estilos.css', v=3)
         -> /static/estilos.css?v=3
     ruta_de(request, 'informe', dni='45123456') -> /informe?dni=45123456
+    ruta_de(request, 'modificar_curso', id=3) -> /cursos/3
+
+    "id" va dentro de la dirección; los demás parámetros, después del "?".
     """
     if nombre == "static":
         ruta = "/static/" + parametros.pop("filename")
+    elif id is not None:
+        ruta = request.app.url_path_for(nombre, id=str(id))
     else:
         ruta = request.app.url_path_for(nombre)
     return f"{ruta}?{urlencode(parametros)}" if parametros else ruta
 
 
 @pass_context
-def url_for(contexto, nombre, **parametros):
+def url_for(contexto, nombre, id=None, **parametros):
     """Versión de ruta_de para usar dentro de las plantillas."""
-    return ruta_de(contexto["request"], nombre, **parametros)
+    return ruta_de(contexto["request"], nombre, id, **parametros)
 
 
 def version_estaticos():
@@ -103,9 +109,9 @@ def pagina(request, plantilla, estado_http=200, **contexto):
                                       status_code=estado_http)
 
 
-def redirigir(request, nombre, **parametros):
+def redirigir(request, nombre, id=None, **parametros):
     """Respuesta que lleva a otra página (código 302)."""
-    return RedirectResponse(ruta_de(request, nombre, **parametros),
+    return RedirectResponse(ruta_de(request, nombre, id, **parametros),
                             status_code=302)
 
 
@@ -202,3 +208,28 @@ def iniciar_sesion(request, usuario):
     # Sesión nueva: evita reutilizar una cookie anterior.
     request.session.clear()
     request.session["usuario_id"] = usuario.id
+
+
+# ----------------------------------------------------------------------
+# Formularios de ABM (alta, baja y modificación)
+# ----------------------------------------------------------------------
+
+async def procesar_formulario(request, accion, mensaje_exito, destino,
+                              pantalla_con_error):
+    """
+    Pasos comunes de todos los formularios de ABM.
+
+    1. Lee el formulario y llama a accion(formulario).
+    2. Si hay un ErrorValidacion, muestra el mensaje y vuelve a la
+       pantalla con lo que se había escrito: pantalla_con_error(formulario).
+    3. Si sale bien, muestra mensaje_exito(resultado) y redirige a la
+       página 'destino'.
+    """
+    formulario = await request.form()
+    try:
+        resultado = accion(formulario)
+    except ErrorValidacion as error:
+        flash(request, str(error), "error")
+        return pantalla_con_error(formulario)
+    flash(request, mensaje_exito(resultado), "exito")
+    return redirigir(request, destino)
