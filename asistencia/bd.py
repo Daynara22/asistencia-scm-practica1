@@ -174,12 +174,18 @@ def conectar(ruta=None):
     conexion = sqlite3.connect(ruta, timeout=TIEMPO_ESPERA, uri=es_uri,
                                isolation_level=None,
                                check_same_thread=False)
-    conexion.row_factory = sqlite3.Row
-    conexion.execute("PRAGMA foreign_keys = ON")
-    conexion.execute(f"PRAGMA busy_timeout = {TIEMPO_ESPERA * 1000}")
-    if not es_uri and ruta != ":memory:":
-        conexion.execute("PRAGMA journal_mode = WAL")
-    crear_esquema(conexion)
+    try:
+        conexion.row_factory = sqlite3.Row
+        conexion.execute("PRAGMA foreign_keys = ON")
+        conexion.execute(f"PRAGMA busy_timeout = {TIEMPO_ESPERA * 1000}")
+        if not es_uri and ruta != ":memory:":
+            conexion.execute("PRAGMA journal_mode = WAL")
+        crear_esquema(conexion)
+    except sqlite3.Error:
+        # Por ejemplo, el archivo no es una base SQLite: se cierra la
+        # conexión antes de avisar el error, para no dejarla abierta.
+        conexion.close()
+        raise
     return conexion
 
 
