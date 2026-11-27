@@ -1,10 +1,74 @@
 // ==========================================================
-// Sistema de Asistencia - un poco de JavaScript
+// Sistema de Asistencia - JavaScript de la interfaz
 // Todo esto es solo para comodidad: las validaciones de verdad
-// se hacen en el servidor (logica.py).
+// se hacen en el servidor (asistencia/validaciones.py y servicios/).
 // ==========================================================
 
-// 1) Reloj en vivo en la pantalla principal
+const raiz = document.documentElement;
+
+// 0) Modo claro / oscuro. El tema inicial lo aplica un script en el <head>
+//    (para que no parpadee); acá se cambia y se guarda la preferencia.
+const botonTema = document.getElementById("boton-tema");
+if (botonTema) {
+  function actualizarBotonTema() {
+    const oscuro = raiz.dataset.tema === "oscuro";
+    const texto = oscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+    botonTema.setAttribute("aria-label", texto);
+    botonTema.title = texto;
+    botonTema.setAttribute("aria-pressed", oscuro ? "true" : "false");
+  }
+  botonTema.addEventListener("click", function () {
+    raiz.dataset.tema = raiz.dataset.tema === "oscuro" ? "claro" : "oscuro";
+    localStorage.setItem("tema", raiz.dataset.tema);
+    actualizarBotonTema();
+  });
+  actualizarBotonTema();
+}
+
+// 1) Menú lateral. En computadora se abre/cierra y se recuerda; en
+//    celular (pantallas angostas) arranca oculto y se abre encima.
+const botonMenu = document.getElementById("boton-menu");
+if (botonMenu) {
+  const pantallaAngosta = window.matchMedia("(max-width: 960px)");
+  const fondoMenu = document.getElementById("fondo-menu");
+
+  function menuVisible() {
+    return pantallaAngosta.matches
+      ? raiz.classList.contains("menu-abierto")
+      : raiz.dataset.sidebar !== "cerrado";
+  }
+  function actualizarBotonMenu() {
+    botonMenu.setAttribute("aria-expanded", menuVisible() ? "true" : "false");
+  }
+  function cerrarMenuCelular() {
+    raiz.classList.remove("menu-abierto");
+    actualizarBotonMenu();
+  }
+
+  botonMenu.addEventListener("click", function () {
+    if (pantallaAngosta.matches) {
+      raiz.classList.toggle("menu-abierto");
+    } else {
+      const cerrado = raiz.dataset.sidebar === "cerrado";
+      if (cerrado) {
+        delete raiz.dataset.sidebar;
+        localStorage.removeItem("sidebar");
+      } else {
+        raiz.dataset.sidebar = "cerrado";
+        localStorage.setItem("sidebar", "cerrado");
+      }
+    }
+    actualizarBotonMenu();
+  });
+  fondoMenu.addEventListener("click", cerrarMenuCelular);
+  document.addEventListener("keydown", function (evento) {
+    if (evento.key === "Escape") cerrarMenuCelular();
+  });
+  pantallaAngosta.addEventListener("change", cerrarMenuCelular);
+  actualizarBotonMenu();
+}
+
+// 2) Reloj en vivo en la pantalla de registro
 const reloj = document.getElementById("reloj");
 if (reloj) {
   function actualizarReloj() {
@@ -17,28 +81,31 @@ if (reloj) {
   setInterval(actualizarReloj, 5000);
 }
 
-// 2) Los campos de DNI solo aceptan números
+// 3) Los campos de DNI solo aceptan números
 document.querySelectorAll(".solo-numeros").forEach(function (campo) {
   campo.addEventListener("input", function () {
     campo.value = campo.value.replace(/[^0-9]/g, "");
   });
 });
 
-// 3) Cerrar mensajes con la "×" y ocultar solos los de éxito
+// 4) Cerrar mensajes con la "×" y ocultar solos los de éxito
 document.querySelectorAll(".mensaje").forEach(function (mensaje) {
+  const boton = mensaje.querySelector(".cerrar-mensaje");
+  if (!boton) return;
   function cerrar() {
     mensaje.classList.add("saliendo");
     setTimeout(function () { mensaje.remove(); }, 300);
   }
-  mensaje.querySelector(".cerrar-mensaje").addEventListener("click", cerrar);
+  boton.addEventListener("click", cerrar);
   if (mensaje.classList.contains("mensaje-exito")) {
     setTimeout(cerrar, 6000);
   }
 });
 
-// 4) Botones que piden confirmación con un segundo clic (sin ventanas de alert)
+// 5) Botones que piden confirmación con un segundo clic (sin ventanas de alert)
 document.querySelectorAll("[data-confirmar]").forEach(function (boton) {
-  const textoOriginal = boton.textContent;
+  // Se guarda el contenido original (puede ser un ícono) para restaurarlo.
+  const contenidoOriginal = Array.from(boton.childNodes);
   boton.addEventListener("click", function (evento) {
     if (boton.dataset.listo === "si") return;   // segundo clic: se envía el formulario
     evento.preventDefault();
@@ -47,13 +114,13 @@ document.querySelectorAll("[data-confirmar]").forEach(function (boton) {
     boton.classList.add("confirmando");
     setTimeout(function () {                    // si no confirma en 4 segundos, vuelve atrás
       boton.dataset.listo = "";
-      boton.textContent = textoOriginal;
+      boton.replaceChildren(...contenidoOriginal);
       boton.classList.remove("confirmando");
     }, 4000);
   });
 });
 
-// 5) Carga manual: la hora de llegada solo se pide para TARDANZA
+// 6) Carga manual: la hora de llegada solo se pide para TARDANZA
 const selectorEstado = document.getElementById("manual-estado");
 if (selectorEstado) {
   const grupoHora = document.getElementById("grupo-hora");
@@ -67,7 +134,7 @@ if (selectorEstado) {
   actualizarHora();
 }
 
-// 6) Buscador de la tabla de alumnos
+// 7) Buscador de la tabla de alumnos
 const filtro = document.getElementById("filtro-alumnos");
 if (filtro) {
   const filas = document.querySelectorAll("#tabla-alumnos tbody tr");
@@ -84,7 +151,7 @@ if (filtro) {
   });
 }
 
-// 7) Registro de docente: marca en verde las reglas de la contraseña que se cumplen
+// 8) Registro de cuenta: marca las reglas de la contraseña que se cumplen
 const campoClave = document.getElementById("clave");
 const reglasClave = document.getElementById("reglas-clave");
 if (campoClave && reglasClave) {
@@ -101,7 +168,7 @@ if (campoClave && reglasClave) {
   });
 }
 
-// 8) Ojito: muestra u oculta lo que se escribe en los campos de contraseña
+// 9) Ojito: muestra u oculta lo que se escribe en los campos de contraseña
 document.querySelectorAll(".ver-clave").forEach(function (boton) {
   const campo = boton.parentElement.querySelector("input");
   boton.addEventListener("click", function () {
@@ -124,41 +191,101 @@ document.querySelectorAll("form").forEach(function (formulario) {
   });
 });
 
-// 9) Dashboard: al pasar el mouse (o el foco del teclado) por una columna del
-//    gráfico, se muestra un globo con el detalle de ese día.
-const grafico = document.getElementById("grafico-dias");
-if (grafico) {
+// 10) Globos (tooltips) de los gráficos.
+//     Cada marca con data-titulo y data-filas ("Etiqueta|valor;Etiqueta|valor")
+//     muestra un globo al pasar el mouse o al llegar con el teclado.
+//     Se arma con textContent: los nombres nunca se interpretan como HTML.
+function crearGlobo(contenedor) {
   const globo = document.createElement("div");
   globo.className = "globo oculto";
   globo.setAttribute("role", "status");
-  grafico.appendChild(globo);
+  contenedor.appendChild(globo);
+  return globo;
+}
 
-  function fila(clase, texto, valor) {
-    return '<div class="globo-fila"><span class="muestra ' + clase + '"></span>' +
-           "<span>" + texto + "</span><span>" + valor + "</span></div>";
-  }
+function llenarGlobo(globo, titulo, filas) {
+  globo.replaceChildren();
+  const fuerte = document.createElement("strong");
+  fuerte.textContent = titulo;
+  globo.appendChild(fuerte);
+  filas.forEach(function (fila) {
+    const div = document.createElement("div");
+    div.className = "globo-fila";
+    if (fila.muestra) {
+      const muestra = document.createElement("span");
+      muestra.className = "muestra " + fila.muestra;
+      div.appendChild(muestra);
+    }
+    const etiqueta = document.createElement("span");
+    etiqueta.textContent = fila.etiqueta;
+    const valor = document.createElement("span");
+    valor.textContent = fila.valor;
+    div.append(etiqueta, valor);
+    globo.appendChild(div);
+  });
+}
 
-  function mostrar(columna) {
-    const d = columna.dataset;
-    globo.innerHTML = "<strong>" + d.fecha + "</strong>" +
-      fila("muestra-presente", "Presentes", d.presentes) +
-      fila("muestra-tardanza", "Tardanzas", d.tardanzas) +
-      fila("muestra-ausente", "Ausentes", d.ausentes);
-    const caja = grafico.getBoundingClientRect();
-    const pila = columna.querySelector(".columna-pila").getBoundingClientRect();
-    let x = pila.left + pila.width / 2 - caja.left;
-    const mitad = 95;                                   // que el globo no se salga por los costados
-    x = Math.max(mitad, Math.min(caja.width - mitad, x));
-    globo.style.left = x + "px";
-    globo.style.top = (pila.top - caja.top - 30) + "px";
-    globo.classList.remove("oculto");
-  }
+function ubicarGlobo(globo, contenedor, objetivo) {
+  const caja = contenedor.getBoundingClientRect();
+  const marca = objetivo.getBoundingClientRect();
+  const mitad = 95;   // que el globo no se salga por los costados
+  let x = marca.left + marca.width / 2 - caja.left;
+  x = Math.max(mitad, Math.min(caja.width - mitad, x));
+  globo.style.left = x + "px";
+  globo.style.top = (marca.top - caja.top - 8) + "px";
+  globo.classList.remove("oculto");
+}
 
-  function ocultar() { globo.classList.add("oculto"); }
+function leerFilas(texto) {
+  return (texto || "").split(";").filter(Boolean).map(function (parte) {
+    const [etiqueta, valor, muestra] = parte.split("|");
+    return { etiqueta: etiqueta, valor: valor, muestra: muestra };
+  });
+}
 
+document.querySelectorAll("[data-globos]").forEach(function (contenedor) {
+  const globo = crearGlobo(contenedor);
+  const cruz = contenedor.querySelector(".svg-cruz");
+  contenedor.querySelectorAll("[data-titulo]").forEach(function (marca) {
+    function mostrar() {
+      llenarGlobo(globo, marca.dataset.titulo, leerFilas(marca.dataset.filas));
+      const ancla = marca.dataset.ancla
+        ? contenedor.querySelector("#" + marca.dataset.ancla) : marca;
+      ubicarGlobo(globo, contenedor, ancla || marca);
+      if (cruz && marca.dataset.x) {        // línea vertical del gráfico de línea
+        cruz.setAttribute("x1", marca.dataset.x);
+        cruz.setAttribute("x2", marca.dataset.x);
+        cruz.classList.remove("oculto");
+      }
+    }
+    function ocultar() {
+      globo.classList.add("oculto");
+      if (cruz) cruz.classList.add("oculto");
+    }
+    marca.addEventListener("mouseenter", mostrar);
+    marca.addEventListener("focus", mostrar);
+    marca.addEventListener("mouseleave", ocultar);
+    marca.addEventListener("blur", ocultar);
+  });
+});
+
+// 11) Dashboard: globo con el detalle de cada día del gráfico de columnas.
+const grafico = document.getElementById("grafico-dias");
+if (grafico) {
+  const globo = crearGlobo(grafico);
   grafico.querySelectorAll(".columna").forEach(function (columna) {
-    columna.addEventListener("mouseenter", function () { mostrar(columna); });
-    columna.addEventListener("focus", function () { mostrar(columna); });
+    function mostrar() {
+      const d = columna.dataset;
+      llenarGlobo(globo, d.fecha, [
+        { etiqueta: "Presentes", valor: d.presentes, muestra: "muestra-presente" },
+        { etiqueta: "Tardanzas", valor: d.tardanzas, muestra: "muestra-tardanza" },
+        { etiqueta: "Ausentes", valor: d.ausentes, muestra: "muestra-ausente" },
+      ]);
+      ubicarGlobo(globo, grafico, columna.querySelector(".columna-pila"));
+    }
+    function ocultar() { globo.classList.add("oculto"); }
+    columna.addEventListener("mouseenter", mostrar);
+    columna.addEventListener("focus", mostrar);
     columna.addEventListener("mouseleave", ocultar);
     columna.addEventListener("blur", ocultar);
   });

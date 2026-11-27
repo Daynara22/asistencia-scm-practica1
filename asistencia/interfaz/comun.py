@@ -15,6 +15,7 @@ from jinja2 import pass_context
 from starlette.routing import NoMatchFound
 
 from asistencia import bd
+from asistencia.interfaz.iconos import icono
 from asistencia.modelos import ADMINISTRADOR, ALUMNO, DOCENTE
 from asistencia.servicios import usuarios
 from asistencia.validaciones import ErrorValidacion
@@ -127,7 +128,7 @@ def version_estaticos():
         return 0
 
 
-templates.env.globals.update(url_for=url_for,
+templates.env.globals.update(url_for=url_for, icono=icono,
                              get_flashed_messages=get_flashed_messages)
 
 

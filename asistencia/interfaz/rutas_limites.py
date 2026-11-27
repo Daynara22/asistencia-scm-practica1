@@ -47,7 +47,7 @@ async def guardar_limites(request: Request,
         request,
         lambda f: limites.cambiar_configuracion(
             conexion, f.get("limite_faltas"), f.get("valor_tardanza")),
-        lambda r: (f"Límite general: {r[0]} faltas. Tardanza: "
-                   f"{limites.VALORES_TARDANZA[r[1]].lower()}."),
+        lambda r: (f"Límite general: {r[0]} faltas. "
+                   f"{limites.VALORES_TARDANZA[r[1]]}."),
         "limites",
         lambda f: pantalla_limites(request, conexion, f, 400))

@@ -68,6 +68,21 @@ def test_evaluar_datos_para_mostrar():
     assert "Superó el límite" in superado["mensaje"]
 
 
+@pytest.mark.parametrize("valor, esperado", [
+    ("0", None), ("0.25", 4), ("0.5", 2), ("1", 1)])
+def test_tardanzas_por_falta(valor, esperado):
+    """La configuración se muestra como 'N tardanzas = 1 falta'."""
+    assert limites.tardanzas_por_falta(valor) == esperado
+
+
+@pytest.mark.parametrize("valor, tardanzas, faltas", [
+    ("0.25", 8, 2), ("0.25", 3, 0.75), ("0.5", 5, 2.5), ("1", 3, 3),
+    ("0", 10, 0)])
+def test_equivalencia_de_tardanzas(valor, tardanzas, faltas):
+    """Con 4 tardanzas = 1 falta, 8 tardanzas son 2 faltas (y así)."""
+    assert float(limites.calcular_faltas(0, tardanzas, valor)) == faltas
+
+
 def test_mostrar_numero():
     """Los enteros se muestran sin decimales."""
     assert limites.mostrar_numero(3) == "3"
@@ -98,7 +113,7 @@ def test_cambiar_configuracion(conexion):
     ("-3", "0", "entre 1 y 365"),
     ("diez", "0", "número"),
     ("", "0", "límite"),
-    ("10", "0.3", "tardanza"),
+    ("10", "0.3", "tardanzas equivalen"),
 ])
 def test_configuracion_invalida(conexion, limite, tardanza, mensaje):
     """Valores fuera de rango no se guardan."""
@@ -240,7 +255,7 @@ def test_pantalla_de_limites(cliente):
     r = cliente.post("/limites", data={"limite_faltas": "12",
                                        "valor_tardanza": "0.5"},
                      follow_redirects=True)
-    assert "Límite general: 12 faltas. Tardanza: 1/2 falta." in r.text
+    assert "Límite general: 12 faltas. 2 tardanzas = 1 falta." in r.text
 
 
 def test_pantalla_de_limites_con_error(cliente):
@@ -275,7 +290,7 @@ def test_dashboard_lista_alertas(con_juan_en_alerta):
 def test_listado_de_alumnos_muestra_faltas(con_juan_en_alerta):
     """El listado de alumnos muestra faltas / límite con color."""
     r = con_juan_en_alerta.get("/alumnos")
-    assert "badge-tardanza" in r.text and "3 / 4" in r.text
+    assert "badge-cerca" in r.text and "3 / 4" in r.text
 
 
 def test_curso_con_limite_propio_desde_la_pantalla(cliente):

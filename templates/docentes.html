@@ -79,10 +79,10 @@
                 {% if usuario.es_administrador %}
                 <td>
                   <div class="acciones-fila">
-                    <a class="boton boton-secundario boton-chico" href="{{ url_for('docentes', editar=d.id) }}">Editar</a>
+                    <a class="boton boton-secundario boton-fila" href="{{ url_for('docentes', editar=d.id) }}" title="Editar">{{ icono('editar') }}<span class="solo-lector">Editar</span></a>
                     <form method="post" action="{{ url_for('eliminar_docente', id=d.id) }}">
-                      <button type="submit" class="boton boton-peligro boton-chico"
-                              data-confirmar="¿Seguro? Tocá de nuevo">Dar de baja</button>
+                      <button type="submit" class="boton boton-peligro boton-fila" title="Dar de baja"
+                              data-confirmar="¿Seguro? Tocá de nuevo">{{ icono('borrar') }}<span class="solo-lector">Dar de baja</span></button>
                     </form>
                   </div>
                 </td>

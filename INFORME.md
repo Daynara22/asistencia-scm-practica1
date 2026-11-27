@@ -76,9 +76,10 @@ escribirlas en un docente o en un horario.
 
 - Límite **general** configurable (por defecto 10 faltas) y, opcionalmente,
   un límite **propio de cada curso**.
-- Cada ausencia es una falta; cada tardanza suma lo que se configure: nada (por
-  defecto), 1/4, 1/2 o 1 falta. Calculo las faltas con fracciones exactas para
-  evitar errores de redondeo.
+- Se registran tres estados: **presente**, **tardanza** y **ausente**. Cada
+  ausencia es una falta y se configura **cuántas tardanzas equivalen a una
+  falta**: no suman (por defecto), 4, 2 o 1. Calculo las faltas con
+  fracciones exactas para evitar errores de redondeo.
 - **Alertas:** "cerca del límite" desde el **75 %** del límite y "límite
   superado" al pasarlo. Se muestran en el informe del alumno, en *Mi
   asistencia*, en el listado de alumnos y en el dashboard.
@@ -89,11 +90,46 @@ escribirlas en un docente o en un horario.
   asistencia, estado respecto del límite y detalle por fecha, con filtro por
   fechas.
 - **Informe total:** resumen general y por curso (cantidades, % de asistencia
-  y alumnos con alerta), una fila por alumno y un **gráfico de barras**
-  apiladas por curso, con filtros por fechas y por curso.
+  y alumnos con alerta) y una tabla por alumno con **clases asistidas,
+  tardanzas, inasistencias, porcentaje de asistencia y estado respecto del
+  límite**, con filtros por **curso, alumno y rango de fechas**.
 - **Exportación a CSV y PDF** de todos los informes, respetando los filtros. El
   CSV usa `;` y coma decimal para abrirse bien en Excel en español; el PDF se
   genera con `fpdf2`, con tablas, gráfico y alertas.
+
+### 2.5 Rediseño de la interfaz
+
+- **Diseño moderno y responsive**: paleta coherente, tipografía Plus Jakarta
+  Sans (incluida en el proyecto), espaciados consistentes, íconos SVG y
+  tarjetas. Se adapta a computadora, tablet y celular.
+- **Modo claro / modo oscuro** con un botón en la barra superior (también en
+  el login). Todos los colores están definidos con **variables CSS** para los
+  dos modos, así fondos, textos, tablas, formularios y gráficos cambian juntos.
+  La preferencia se guarda en el navegador y, si no hay ninguna, se usa la del
+  sistema operativo. El tema se aplica antes de dibujar la página, sin
+  parpadeos.
+- **Menú lateral desplegable** que se abre y cierra con el botón de
+  hamburguesa (en computadora recuerda si quedó cerrado). En celulares se
+  oculta solo y se abre encima del contenido. Resalta la pantalla actual y
+  muestra solo las opciones del rol: Inicio, Tomar asistencia, Alumnos,
+  Docentes, Cursos, Horarios, Usuarios (solo administrador), Informes,
+  Gráficos, Configuración y Cerrar sesión. El alumno ve *Mi asistencia* y
+  *Gráficos*.
+- **Dashboard con tarjetas resumen**: total de alumnos, porcentaje de
+  asistencia general y cantidad de alumnos cerca o por encima del límite de
+  faltas, además de los números del día.
+- **Sección de gráficos** (dibujados como SVG, sin librerías externas):
+  - **dona** con la proporción de asistencias, tardanzas e inasistencias de un
+    alumno (o de un curso);
+  - **barras** comparando el porcentaje de asistencia de los alumnos de un
+    curso;
+  - **línea** con la evolución de la asistencia en el tiempo (por día, o por
+    semana cuando hay muchos días).
+
+  Todos tienen filtros, globos con el detalle al pasar el mouse o llegar con
+  el teclado y una tabla con los datos. Los colores (presente azul, tardanza
+  ámbar, ausente rojo) los validé con un script para que se distingan también
+  con daltonismo, en los dos modos. El alumno solo ve sus propios gráficos.
 
 ## 3. Estructura del proyecto
 
@@ -114,8 +150,10 @@ asistencia-scm-practica1/
 │   ├── migracion.py        # Lectura e importación del JSON anterior
 │   ├── exportar.py         # Exportación de informes a CSV y PDF
 │   ├── servicios/          # Lógica: usuarios, alumnos, docentes, materias,
-│   │                       # cursos, horarios, asistencias, límites, informes
-│   └── interfaz/           # Interfaz web: FastAPI, sesión, permisos y rutas
+│   │                       # cursos, horarios, asistencias, límites,
+│   │                       # informes y gráficos (datos y geometría SVG)
+│   └── interfaz/           # Interfaz web: FastAPI, sesión, permisos, rutas
+│                           # e íconos
 ├── templates/              # Páginas HTML (Jinja2)
 ├── static/                 # CSS, JavaScript y fuente
 ├── tests/                  # Tests con pytest
@@ -152,8 +190,11 @@ Después se abre **http://127.0.0.1:5000** en el navegador.
    Al terminar el día, *Cerrar el día* marca los ausentes.
 4. Desde *Usuarios* el administrador crea cuentas de alumno, para que cada
    alumno vea su propia asistencia.
-5. *Límite de faltas* configura el límite y *Informes* muestra y exporta los
-   resúmenes.
+5. *Configuración* define el límite de faltas y la equivalencia de las
+   tardanzas; *Informes* muestra y exporta los resúmenes y *Gráficos* los
+   muestra visualmente.
+6. El botón de la luna / el sol (arriba a la derecha) cambia entre modo claro
+   y oscuro; el botón de hamburguesa abre y cierra el menú.
 
 Si había datos de la versión anterior: `python migrar_json.py` y después
 `python gestionar_usuarios.py hacer-admin email@ejemplo.com`.
@@ -182,16 +223,18 @@ flake8                 # verificación de PEP 8
 | Cursos | `test_cursos.py` | 14 |
 | Horarios | `test_horarios.py` | 18 |
 | Asistencia | `test_asistencias.py` | 21 |
-| Límite de faltas | `test_limites.py` | 41 |
+| Límite de faltas y equivalencia de tardanzas | `test_limites.py` | 50 |
 | Informes y exportación | `test_informes.py`, `test_informes_web.py`, `test_exportar.py` | 54 |
+| Gráficos (datos, geometría y pantalla) | `test_graficos.py` | 20 |
+| Interfaz: menú por rol, modo oscuro, dashboard y filtros | `test_interfaz.py` | 25 |
 | Pantallas y ABM web | `test_web.py`, `test_abm_web.py` | 83 |
 | Validaciones, base de datos, migración, modelos y `main.py` | `test_validaciones.py`, `test_bd.py`, `test_migracion.py`, `test_modelos.py`, `test_main.py` | 95 |
-| **Total** | | **428** |
+| **Total** | | **482** |
 
 Resultado al cerrar el trabajo:
 
 ```
-428 passed in 10.39s
+482 passed in 14.80s
 Required test coverage of 90.0% reached. Total coverage: 100.00%
 flake8: 0 avisos
 ```
@@ -306,3 +349,4 @@ de cada commit.
 - Migrar a **PostgreSQL** si la cantidad de usuarios simultáneos crece mucho.
 - Registro de **auditoría** (quién cambió qué y cuándo).
 - Despliegue automático (CD) a un servidor cuando el pipeline pasa en `main`.
+- Instalar la aplicación como PWA para usarla desde el celular sin navegador.

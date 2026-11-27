@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block titulo %}Gráficos{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Gráficos de asistencia</h1>
+    <p class="subtitulo">
+      {% if datos %}{{ datos.sujeto }} · {{ datos.periodo }}{% else %}Elegí los filtros para ver los gráficos.{% endif %}
+    </p>
+  </div>
+</section>
+
+{# ---------------- Filtros (una sola fila arriba de los gráficos) ---------------- #}
+<section class="tarjeta">
+  <form method="get" action="{{ url_for('graficos') }}" class="form-linea filtro-informe">
+    {% if not usuario.es_alumno %}
+      <div class="campo">
+        <label for="curso">Curso</label>
+        <select id="curso" name="curso">
+          <option value="">Todos</option>
+          {% for c in cursos %}
+            <option value="{{ c.id }}" {{ 'selected' if filtro.curso == c.id|string else '' }}>{{ c.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="dni">Alumno</label>
+        <select id="dni" name="dni">
+          <option value="">Todos</option>
+          {% for a in alumnos %}
+            <option value="{{ a.dni }}" {{ 'selected' if filtro.dni == a.dni else '' }}>{{ a.apellido }}, {{ a.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+    <div class="campo">
+      <label for="desde">Desde</label>
+      <input id="desde" name="desde" type="date" value="{{ filtro.desde }}">
+    </div>
+    <div class="campo">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" name="hasta" type="date" value="{{ filtro.hasta }}">
+    </div>
+    <button type="submit" class="boton boton-principal">Ver</button>
+    <a class="boton boton-secundario" href="{{ url_for('graficos') }}">Limpiar</a>
+  </form>
+</section>
+
+{% if datos %}
+<div class="grilla grilla-graficos">
+  {# ---------------- Dona: proporción de estados ---------------- #}
+  {% set d = datos.dona %}
+  <section class="tarjeta" id="grafico-dona">
+    <h2>Asistencias, tardanzas e inasistencias</h2>
+    <p class="nota">{{ datos.sujeto }}</p>
+    {% if d.total %}
+      <div class="dona-contenido">
+        <div class="grafico-svg" data-globos>
+          <svg viewBox="0 0 200 200" role="img"
+               aria-label="{% for s in d.leyenda %}{{ s.etiqueta }} {{ s.porcentaje }} %{{ ', ' if not loop.last else '' }}{% endfor %}">
+            <circle class="svg-pista" cx="100" cy="100" r="{{ d.radio }}" stroke-width="24"/>
+            <g transform="rotate(-90 100 100)">
+              {% for s in d.segmentos %}
+                <circle class="arco arco-{{ s.clave }}" cx="100" cy="100" r="{{ d.radio }}" stroke-width="24"
+                        stroke-dasharray="{{ s.largo }} {{ s.resto }}" stroke-dashoffset="{{ s.desplazamiento }}"
+                        tabindex="0" data-titulo="{{ s.etiqueta }}"
+                        data-filas="Cantidad|{{ s.valor }};Porcentaje|{{ s.porcentaje }} %"/>
+              {% endfor %}
+            </g>
+            <text x="100" y="98" text-anchor="middle" class="svg-texto" font-size="26" font-weight="800">{{ d.porcentaje_asistencia }}%</text>
+            <text x="100" y="121" text-anchor="middle" class="svg-texto-suave">asistencia</text>
+          </svg>
+        </div>
+        <ul class="dona-leyenda">
+          {% for s in d.leyenda %}
+            <li><span class="muestra muestra-{{ s.clave }}" aria-hidden="true"></span>{{ s.etiqueta }}
+                <span class="valor">{{ s.valor }}</span><span class="porcentaje">{{ s.porcentaje }} %</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+      <p class="nota">La asistencia cuenta presentes y tardanzas ({{ d.total }} registros).</p>
+    {% else %}
+      <p class="vacio">No hay registros para estos filtros.</p>
+    {% endif %}
+  </section>
+
+  {# ---------------- Barras: alumnos de un curso ---------------- #}
+  {% if not usuario.es_alumno %}
+  <section class="tarjeta" id="grafico-barras">
+    <h2>Asistencia por alumno</h2>
+    <p class="nota">{{ datos.curso_barras or 'Todavía no hay cursos' }} · porcentaje de asistencia</p>
+    {% if datos.barras %}
+      <div class="grafico-svg" data-globos>
+        <ul class="barras">
+          {% for b in datos.barras %}
+            <li class="{{ 'barras-sin-datos' if b.sin_registros else '' }}" tabindex="0"
+                data-titulo="{{ b.nombre }}"
+                data-filas="Asistencia|{{ b.porcentaje }} %;Presentes|{{ b.presentes }}|muestra-presente;Tardanzas|{{ b.tardanzas }}|muestra-tardanza;Ausentes|{{ b.ausentes }}|muestra-ausente">
+              <span class="barras-nombre">{{ b.nombre }}</span>
+              <span class="barras-pista"><span class="barras-relleno" style="width: {{ b.porcentaje }}%"></span></span>
+              <span class="barras-valor">{{ 'Sin datos' if b.sin_registros else b.porcentaje ~ ' %' }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <details class="ver-tabla">
+        <summary>Ver los datos en una tabla</summary>
+        <div class="tabla-contenedor">
+          <table class="tabla">
+            <thead><tr><th>Alumno</th><th class="numero">Presentes</th><th class="numero">Tardanzas</th><th class="numero">Ausentes</th><th class="numero">Asistencia</th></tr></thead>
+            <tbody>
+              {% for b in datos.barras %}
+                <tr><td>{{ b.nombre }}</td><td class="numero">{{ b.presentes }}</td><td class="numero">{{ b.tardanzas }}</td>
+                    <td class="numero">{{ b.ausentes }}</td><td class="numero">{{ b.porcentaje }} %</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {% else %}
+      <p class="vacio">No hay alumnos en este curso.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+</div>
+
+{# ---------------- Línea: evolución en el tiempo ---------------- #}
+{% set g = datos.evolucion %}
+<section class="tarjeta" id="grafico-linea">
+  <div class="tarjeta-cabecera">
+    <h2>Evolución de la asistencia</h2>
+    <span class="chip">{{ 'Por semana' if datos.agrupado == 'semana' else 'Por día' }}</span>
+  </div>
+  {% if g.puntos %}
+    {% set primero = g.puntos[0] %}{% set ultimo = g.puntos[-1] %}
+    <div class="grafico-svg grafico-desplazable" data-globos>
+      <svg viewBox="0 0 {{ g.ancho }} {{ g.alto }}" role="img"
+           aria-label="Porcentaje de asistencia {{ 'por semana' if datos.agrupado == 'semana' else 'por día' }}: de {{ primero.porcentaje }} % el {{ primero.detalle }} a {{ ultimo.porcentaje }} % el {{ ultimo.detalle }}">
+        {% for l in g.grilla %}
+          <line class="svg-grilla" x1="{{ g.izquierda }}" x2="{{ g.derecha }}" y1="{{ l.y }}" y2="{{ l.y }}"/>
+          <text class="svg-texto-suave" x="{{ g.izquierda - 8 }}" y="{{ l.y + 4 }}" text-anchor="end">{{ l.valor }}%</text>
+        {% endfor %}
+        <line class="svg-eje" x1="{{ g.izquierda }}" x2="{{ g.derecha }}" y1="{{ g.base }}" y2="{{ g.base }}"/>
+        <polygon class="svg-area" points="{{ primero.x }},{{ g.base }} {{ g.linea }} {{ ultimo.x }},{{ g.base }}"/>
+        <polyline class="svg-linea" points="{{ g.linea }}"/>
+        <line class="svg-cruz oculto" x1="0" x2="0" y1="{{ g.arriba }}" y2="{{ g.base }}"/>
+        {% for p in g.puntos %}
+          <circle class="svg-punto" id="punto-{{ loop.index }}" cx="{{ p.x }}" cy="{{ p.y }}" r="4"/>
+          {% if p.con_etiqueta %}
+            <text class="svg-texto-suave" x="{{ p.x }}" y="{{ g.base + 20 }}" text-anchor="middle">{{ p.etiqueta }}</text>
+          {% endif %}
+        {% endfor %}
+        {# Franjas invisibles: reciben el mouse y el teclado en cada punto. #}
+        {% for p in g.puntos %}
+          <rect class="svg-franja" x="{{ p.x - g.franja / 2 }}" y="{{ g.arriba }}" width="{{ g.franja }}"
+                height="{{ g.base - g.arriba }}" tabindex="0" data-x="{{ p.x }}" data-ancla="punto-{{ loop.index }}"
+                data-titulo="{{ p.detalle }}"
+                data-filas="Asistencia|{{ p.porcentaje }} %;Presentes|{{ p.presentes }}|muestra-presente;Tardanzas|{{ p.tardanzas }}|muestra-tardanza;Ausentes|{{ p.ausentes }}|muestra-ausente"/>
+        {% endfor %}
+      </svg>
+    </div>
+    <details class="ver-tabla">
+      <summary>Ver los datos en una tabla</summary>
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead><tr><th>{{ 'Semana' if datos.agrupado == 'semana' else 'Fecha' }}</th><th class="numero">Presentes</th><th class="numero">Tardanzas</th><th class="numero">Ausentes</th><th class="numero">Asistencia</th></tr></thead>
+          <tbody>
+            {% for p in g.puntos|reverse %}
+              <tr><td>{{ p.detalle }}</td><td class="numero">{{ p.presentes }}</td><td class="numero">{{ p.tardanzas }}</td>
+                  <td class="numero">{{ p.ausentes }}</td><td class="numero">{{ p.porcentaje }} %</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  {% else %}
+    <p class="vacio">No hay registros para estos filtros.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

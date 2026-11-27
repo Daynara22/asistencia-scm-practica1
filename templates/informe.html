@@ -87,7 +87,7 @@
         <span class="contador-numero">{{ informe.porcentaje_asistencia }} %</span>
         <span class="contador-texto">Asistencia</span>
       </div>
-      <div class="contador {{ 'contador-ausente' if s.estado == 'superado' else 'contador-tardanza' if s.estado == 'cerca' else 'contador-presente' }}">
+      <div class="contador contador-{{ s.estado }}">
         <span class="contador-numero">{{ s.faltas_texto }} / {{ s.limite }}</span>
         <span class="contador-texto">Faltas · {{ s.porcentaje_limite }} % del límite</span>
       </div>

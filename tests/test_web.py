@@ -258,7 +258,8 @@ def test_dashboard_muestra_grafico_y_ranking(cliente):
     pagina = cliente.get("/").text
     assert 'id="grafico-dias"' in pagina
     assert "Más ausencias" in pagina and "Ana Díaz" in pagina
-    assert "Asistencia general: <strong>50.0 %</strong>" in pagina
+    assert 'id="tarjetas-resumen"' in pagina
+    assert '<span class="kpi-valor">50.0%</span>' in pagina
 
 
 def test_la_base_real_no_se_usa_en_los_tests(ruta_memoria):

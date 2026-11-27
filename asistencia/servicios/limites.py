@@ -3,8 +3,10 @@ limites.py - Límite máximo de faltas y alertas.
 
 - Hay un límite general (por defecto 10 faltas) y cada curso puede tener
   el suyo, que reemplaza al general para sus alumnos.
-- Cada AUSENTE es una falta. Cada TARDANZA suma lo que diga
-  "valor_tardanza": 0 (no suma, por defecto), 1/4, 1/2 o 1 falta.
+- Cada AUSENTE es una falta. Las TARDANZAS se convierten en faltas según
+  la equivalencia configurada: no suman (por defecto), 4 tardanzas = 1
+  falta, 2 tardanzas = 1 falta o 1 tardanza = 1 falta. Internamente se
+  guarda cuánto vale cada tardanza ("valor_tardanza": 0, 1/4, 1/2 o 1).
 - Estados respecto del límite:
     normal    menos del 75 % del límite
     cerca     desde el 75 % del límite hasta el límite inclusive
@@ -25,12 +27,12 @@ NORMAL = "normal"
 CERCA = "cerca"
 SUPERADO = "superado"
 
-# Valores permitidos para una tardanza, con el texto para mostrar.
+# Valores permitidos para una tardanza, con la equivalencia para mostrar.
 VALORES_TARDANZA = {
-    "0": "No suma",
-    "0.25": "1/4 de falta",
-    "0.5": "1/2 falta",
-    "1": "1 falta",
+    "0": "Las tardanzas no suman faltas",
+    "0.25": "4 tardanzas = 1 falta",
+    "0.5": "2 tardanzas = 1 falta",
+    "1": "1 tardanza = 1 falta",
 }
 
 
@@ -65,6 +67,16 @@ def valor_tardanza(conexion):
     return _leer(conexion, "valor_tardanza", "0")
 
 
+def tardanzas_por_falta(tardanza_texto):
+    """
+    Cuántas tardanzas equivalen a una falta: '0.5' -> 2, '1' -> 1.
+
+    Devuelve None si las tardanzas no suman faltas ('0').
+    """
+    valor = Fraction(tardanza_texto)
+    return int(1 / valor) if valor else None
+
+
 def cambiar_configuracion(conexion, limite_texto, tardanza_texto):
     """Cambia el límite general y el valor de la tardanza."""
     limite = validar_entero(limite_texto, "el límite de faltas", 1,
@@ -72,7 +84,8 @@ def cambiar_configuracion(conexion, limite_texto, tardanza_texto):
     tardanza = str(tardanza_texto or "").strip()
     if tardanza not in VALORES_TARDANZA:
         raise ErrorValidacion(
-            "El valor de la tardanza debe ser 0, 1/4, 1/2 o 1 falta.")
+            "Elegí cuántas tardanzas equivalen a una falta: ninguna, 4, 2 "
+            "o 1.")
     _guardar(conexion, "limite_faltas", str(limite))
     _guardar(conexion, "valor_tardanza", tardanza)
     return limite, tardanza

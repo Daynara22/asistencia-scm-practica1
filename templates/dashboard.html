@@ -17,11 +17,50 @@
   </div>
 </section>
 
+{# Tarjetas resumen: los números más importantes de un vistazo. #}
+{% set cerca = alertas|selectattr('estado', 'equalto', 'cerca')|list|length %}
+{% set superados = alertas|selectattr('estado', 'equalto', 'superado')|list|length %}
+<section class="kpis" aria-label="Resumen general" id="tarjetas-resumen">
+  <div class="kpi">
+    <span class="kpi-icono">{{ icono('alumnos') }}</span>
+    <div class="kpi-datos">
+      <span class="kpi-etiqueta">Total de alumnos</span>
+      <span class="kpi-valor">{{ resumen.alumnos }}</span>
+      <span class="kpi-detalle">Registrados en el sistema</span>
+    </div>
+  </div>
+  <div class="kpi">
+    <span class="kpi-icono">{{ icono('tendencia') }}</span>
+    <div class="kpi-datos">
+      <span class="kpi-etiqueta">Asistencia general</span>
+      <span class="kpi-valor">{{ resumen.porcentaje_asistencia }}%</span>
+      <span class="kpi-detalle">{{ resumen.total_registros }} registros · presentes y tardanzas</span>
+    </div>
+  </div>
+  <div class="kpi {{ 'kpi-aviso' if cerca else 'kpi-exito' }}">
+    <span class="kpi-icono">{{ icono('alerta') }}</span>
+    <div class="kpi-datos">
+      <span class="kpi-etiqueta">Cerca del límite</span>
+      <span class="kpi-valor">{{ cerca }}</span>
+      <span class="kpi-detalle">Desde el 75 % de {{ limite_general }} faltas</span>
+    </div>
+  </div>
+  <div class="kpi {{ 'kpi-peligro' if superados else 'kpi-exito' }}">
+    <span class="kpi-icono">{{ icono('superado') }}</span>
+    <div class="kpi-datos">
+      <span class="kpi-etiqueta">Superaron el límite</span>
+      <span class="kpi-valor">{{ superados }}</span>
+      <span class="kpi-detalle">Más faltas que las permitidas</span>
+    </div>
+  </div>
+</section>
+
+<h2>Hoy</h2>
 <section class="estadisticas" aria-label="Números de hoy">
   <div class="estadistica estadistica-alumnos">
-    <span class="estadistica-etiqueta">Alumnos</span>
-    <span class="estadistica-valor">{{ resumen.alumnos }}</span>
-    <span class="estadistica-detalle">{{ resumen.sin_registrar }} sin registrar hoy</span>
+    <span class="estadistica-etiqueta">Sin registrar</span>
+    <span class="estadistica-valor">{{ resumen.sin_registrar }}</span>
+    <span class="estadistica-detalle">de {{ resumen.alumnos }} alumnos</span>
   </div>
   <div class="estadistica estadistica-presente">
     <span class="estadistica-etiqueta">Presentes hoy</span>
@@ -44,7 +83,6 @@
   <section class="tarjeta">
     <div class="tarjeta-cabecera">
       <h2>Asistencia de los últimos días</h2>
-      <span class="chip">Asistencia general: <strong>{{ resumen.porcentaje_asistencia }} %</strong></span>
     </div>
 
     {% if resumen.dias %}
@@ -112,7 +150,7 @@
           {% for a in alertas %}
             <li>
               <a href="{{ url_for('informe', dni=a.dni) }}">{{ a.nombre }}</a>
-              <span class="badge {{ 'badge-ausente' if a.estado == 'superado' else 'badge-tardanza' }} ranking-cantidad"
+              <span class="badge badge-{{ a.estado }} ranking-cantidad"
                     title="{{ a.mensaje }}">{{ 'Superó' if a.estado == 'superado' else 'Cerca' }} · {{ a.faltas_texto }}/{{ a.limite }}</span>
             </li>
           {% endfor %}

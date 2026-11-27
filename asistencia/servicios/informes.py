@@ -57,7 +57,7 @@ def validar_rango(desde_texto, hasta_texto):
     return desde, hasta
 
 
-def _condicion_fechas(columna, desde, hasta):
+def condicion_fechas(columna, desde, hasta):
     """
     Fragmento SQL y parámetros para filtrar 'columna' entre dos fechas.
 
@@ -91,6 +91,8 @@ def _porcentajes(presentes, tardanzas, ausentes):
     """Totales y porcentajes de un grupo de registros."""
     total = presentes + tardanzas + ausentes
     return {
+        # Clases asistidas: vino a horario o tarde.
+        "asistidas": presentes + tardanzas,
         "presentes": presentes,
         "tardanzas": tardanzas,
         "ausentes": ausentes,
@@ -110,7 +112,7 @@ def informe_alumno(conexion, dni, desde=None, hasta=None):
     contados. La situación respecto del límite usa todos los registros.
     """
     alumno = alumnos.buscar_por_dni(conexion, dni)
-    condicion, parametros = _condicion_fechas("fecha", desde, hasta)
+    condicion, parametros = condicion_fechas("fecha", desde, hasta)
     filas = conexion.execute(
         "SELECT fecha, estado, hora, manual FROM asistencias "
         f"WHERE alumno_id = ? AND {condicion} ORDER BY fecha DESC",
@@ -141,9 +143,12 @@ def informe_alumno(conexion, dni, desde=None, hasta=None):
     }
 
 
-def informe_total(conexion, desde=None, hasta=None, curso_id=None):
+def informe_total(conexion, desde=None, hasta=None, curso_id=None,
+                  dni=None):
     """
     Resumen de asistencia general y por curso.
+
+    Filtros opcionales: rango de fechas, curso y alumno (por DNI).
 
     Devuelve un diccionario con:
       - general: totales y porcentajes de todos los alumnos filtrados.
@@ -154,7 +159,9 @@ def informe_total(conexion, desde=None, hasta=None, curso_id=None):
     """
     if curso_id is not None:
         curso_id = cursos.buscar(conexion, curso_id).id
-    condicion, parametros = _condicion_fechas("a.fecha", desde, hasta)
+    alumno = alumnos.buscar_por_dni(conexion, dni) if dni else None
+    alumno_id = alumno.id if alumno else None
+    condicion, parametros = condicion_fechas("a.fecha", desde, hasta)
     # LEFT JOIN: los alumnos sin registros en el período aparecen con 0.
     filas = conexion.execute(
         "SELECT al.id, al.dni, al.nombre, al.apellido, al.curso_id, "
@@ -163,8 +170,9 @@ def informe_total(conexion, desde=None, hasta=None, curso_id=None):
         "COALESCE(SUM(a.estado = 'AUSENTE'), 0) AS ausentes "
         "FROM alumnos al LEFT JOIN asistencias a "
         f"ON a.alumno_id = al.id AND {condicion} "
-        "WHERE ? IS NULL OR al.curso_id = ? GROUP BY al.id",
-        [*parametros, curso_id, curso_id]).fetchall()
+        "WHERE (? IS NULL OR al.curso_id = ?) AND (? IS NULL OR al.id = ?) "
+        "GROUP BY al.id",
+        [*parametros, curso_id, curso_id, alumno_id, alumno_id]).fetchall()
 
     nombres = {fila["id"]: Curso.desde_fila(fila).nombre_completo
                for fila in conexion.execute("SELECT * FROM cursos")}
@@ -190,6 +198,7 @@ def informe_total(conexion, desde=None, hasta=None, curso_id=None):
     return {
         "periodo": _texto_periodo(desde, hasta),
         "curso": nombres.get(curso_id),
+        "alumno": alumno.nombre_completo if alumno else None,
         "general": _resumir_grupo("General", filas_alumnos),
         "cursos": _resumir_por_curso(filas_alumnos),
         "alumnos": filas_alumnos,

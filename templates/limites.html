@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block titulo %}Límite de faltas{% endblock %}
+{% block titulo %}Configuración{% endblock %}
 
 {% block contenido %}
 <section class="encabezado">
@@ -20,7 +20,7 @@
                value="{{ formulario.get('limite_faltas', '') }}" required>
       </div>
       <div class="campo">
-        <label for="valor_tardanza">Cada tardanza suma</label>
+        <label for="valor_tardanza">¿Cuántas tardanzas equivalen a una falta?</label>
         <select id="valor_tardanza" name="valor_tardanza">
           {% for valor, texto in valores_tardanza.items() %}
             <option value="{{ valor }}" {{ 'selected' if formulario.get('valor_tardanza') == valor else '' }}>{{ texto }}</option>
@@ -30,7 +30,7 @@
       <button type="submit" class="boton boton-principal boton-ancho">Guardar</button>
     </form>
     {% else %}
-      <p><strong>{{ limite_general }}</strong> faltas permitidas. Cada tardanza: {{ valores_tardanza[formulario.get('valor_tardanza')]|lower }}.</p>
+      <p><strong>{{ limite_general }}</strong> faltas permitidas. {{ valores_tardanza[formulario.get("valor_tardanza")] }}.</p>
       <p class="nota">Solo un administrador puede cambiarlo.</p>
     {% endif %}
     <p class="nota">Cada ausencia es una falta. Los cursos pueden tener su propio límite: se configura en
@@ -65,7 +65,7 @@
               <tr>
                 <td>{{ a.nombre }}</td>
                 <td>{{ a.faltas_texto }} / {{ a.limite }} ({{ a.porcentaje_limite }} %)</td>
-                <td><span class="badge {{ 'badge-ausente' if a.estado == 'superado' else 'badge-tardanza' }}">{{ 'Superó el límite' if a.estado == 'superado' else 'Cerca del límite' }}</span></td>
+                <td><span class="badge badge-{{ a.estado }}">{{ 'Superó el límite' if a.estado == 'superado' else 'Cerca del límite' }}</span></td>
                 <td><a class="enlace" href="{{ url_for('informe', dni=a.dni) }}">Ver informe →</a></td>
               </tr>
             {% endfor %}
