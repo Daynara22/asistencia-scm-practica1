@@ -1,7 +1,7 @@
 # Sistema de Asistencia de Alumnos
 
 Sistema web para registrar la asistencia de alumnos por DNI.
-Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardados en **JSON**.
+Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardados en una base **SQLite**.
 
 ## Funciones
 
@@ -26,25 +26,31 @@ Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardado
 
 ```
 asistencia-scm-practica1/
-├── app.py              # Rutas de FastAPI (pantallas y formularios)
-├── logica.py           # Reglas del sistema y validaciones
-├── datos.py            # Lectura y guardado del archivo JSON
-├── templates/          # Páginas HTML
-│   ├── base.html       # Estructura común (menú, saludo y mensajes)
-│   ├── login.html      # Ingreso de docentes
-│   ├── registro_docente.html  # Crear cuenta de docente
-│   ├── dashboard.html  # Dashboard (pantalla de inicio)
-│   ├── index.html      # Registrar asistencia
-│   ├── alumnos.html    # Alta y listado de alumnos
-│   ├── informe.html    # Informe por alumno
-│   └── error.html      # Página de error amigable
-├── static/
-│   ├── estilos.css     # Diseño
-│   ├── app.js          # Reloj, confirmaciones, buscador, contraseña, gráfico
-│   └── fuentes/        # Fuente Plus Jakarta Sans (licencia OFL)
-├── tests/              # Pruebas con pytest
-├── datos/              # Se crea sola: acá queda asistencia.json
+├── app.py                  # Punto de entrada: python app.py
+├── migrar_json.py          # Pasa los datos del antiguo JSON a SQLite
+├── main.py                 # Módulo de consola original (v2.1.0)
+├── asistencia/
+│   ├── bd.py               # Conexión a SQLite, esquema y transacciones
+│   ├── modelos.py          # Clases de datos: Usuario, Alumno, RegistroAsistencia
+│   ├── validaciones.py     # Validación de DNI, nombres, emails, fechas, horas
+│   ├── seguridad.py        # Hash de contraseñas (scrypt)
+│   ├── migracion.py        # Lectura del JSON viejo e importación
+│   ├── servicios/          # Reglas del sistema
+│   │   ├── usuarios.py     # Cuentas y login
+│   │   ├── alumnos.py      # Alta, búsqueda y listado
+│   │   ├── asistencias.py  # Registro, carga manual y cierre del día
+│   │   ├── configuracion.py# Hora límite
+│   │   └── informes.py     # Informe por alumno y dashboard
+│   └── interfaz/           # Aplicación web (FastAPI)
+│       ├── __init__.py     # crear_app(): rutas, sesión y errores
+│       ├── comun.py        # Plantillas, mensajes, conexión y sesión
+│       └── rutas_*.py      # Pantallas agrupadas por tema
+├── templates/              # Páginas HTML
+├── static/                 # CSS, JavaScript y fuentes
+├── tests/                  # Pruebas con pytest (base en memoria)
+├── datos/                  # Se crea sola: acá queda asistencia.db
 ├── requirements.txt
+├── .flake8                 # Configuración de PEP 8
 └── pytest.ini
 ```
 
@@ -72,6 +78,19 @@ Después abrí en el navegador: **http://127.0.0.1:5000**
 
 La primera vez, entrá a **Crear cuenta de docente** para registrarte.
 
+### Pasar los datos del JSON anterior
+
+Las versiones anteriores guardaban todo en `datos/asistencia.json`. Para pasar
+esos datos a la base SQLite (los docentes conservan su contraseña):
+```
+python migrar_json.py
+```
+El JSON no se modifica y queda como respaldo. Se puede ejecutar más de una
+vez sin duplicar datos.
+
+> **Base de datos:** por defecto es `datos/asistencia.db`. Para usar otra,
+> definí la variable de entorno `ASISTENCIA_BD` con la ruta del archivo.
+
 > **Clave de sesión:** el login usa una cookie firmada. Para que las sesiones
 > sigan abiertas después de reiniciar el servidor, definí la variable de entorno
 > `SECRET_KEY` con un texto largo y secreto antes de ejecutar `python app.py`
@@ -90,11 +109,13 @@ uvicorn app:app --reload --port 5000
 Con el entorno activado:
 ```
 pytest
+flake8
 ```
+Los tests usan bases SQLite en memoria: nunca tocan `datos/asistencia.db`.
 
 ## Validaciones
 
-Todas se hacen **en el servidor** (`logica.py`); el navegador solo ayuda.
+Todas se hacen **en el servidor** (`asistencia/validaciones.py` y `asistencia/servicios/`); el navegador solo ayuda.
 
 - Email del docente: formato válido (`nombre@dominio.ext`), sin repetir. Se guarda en minúsculas.
 - Contraseña del docente: **mínimo 8 caracteres**, con al menos **una letra**, **un número**
@@ -107,26 +128,17 @@ Todas se hacen **en el servidor** (`logica.py`); el navegador solo ayuda.
 - Fechas `AAAA-MM-DD` que existan y no sean futuras; horas `HH:MM` válidas.
   Las horas se comparan como horas (objetos `time`), no como texto.
 - No se puede registrar en un día cerrado ni cerrar el mismo día dos veces.
-- Si `datos/asistencia.json` está dañado, el sistema no se cierra: guarda una copia
-  (`asistencia.danado-FECHA.json`), avisa en pantalla y sigue con datos vacíos.
-- El guardado es seguro: se escribe un archivo temporal y después se reemplaza.
+- Varios usuarios pueden trabajar a la vez: SQLite en modo WAL, transacciones
+  `BEGIN IMMEDIATE` y restricciones `UNIQUE` en la base (DNI, email, un registro
+  por alumno y fecha), así dos pedidos simultáneos nunca duplican ni pisan datos.
+- Si la base no responde o está dañada, se muestra una página de error clara.
 
-## Formato del JSON
+## Tablas de la base
 
-```json
-{
-  "config": {"hora_limite": "08:15"},
-  "alumnos": {
-    "45123456": {"nombre": "Juan", "apellido": "Pérez"}
-  },
-  "asistencias": {
-    "2026-11-06": {
-      "45123456": {"estado": "PRESENTE", "hora": "08:02", "manual": false}
-    }
-  },
-  "dias_cerrados": ["2026-11-06"],
-  "docentes": {
-    "maria.gonzalez@escuela.edu.ar": {"nombre": "María", "apellido": "González", "clave": "<hash>"}
-  }
-}
-```
+| Tabla | Contenido |
+|---|---|
+| `usuarios` | Cuentas de docentes: email (único), nombre, apellido y hash de la clave |
+| `alumnos` | DNI (único), nombre y apellido |
+| `asistencias` | Alumno, fecha, estado, hora y si fue carga manual (un registro por alumno y fecha) |
+| `dias_cerrados` | Fechas cerradas |
+| `configuracion` | Opciones del sistema (hora límite) |
