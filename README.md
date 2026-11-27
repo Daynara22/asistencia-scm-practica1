@@ -19,7 +19,18 @@ Hecho con **Python + FastAPI**, **HTML + CSS + JavaScript** y los datos guardado
   las siguientes, como docentes. Siempre queda al menos un administrador.
   Sin iniciar sesión no se puede ver ni usar ninguna pantalla, y cada rol
   recibe "No tenés permiso" (403) en las pantallas que no le corresponden.
-- **Alta de alumnos** con DNI, nombre y apellido (sin DNI repetidos).
+- **ABM (alta, baja y modificación)** de:
+  | Entidad | Datos | Validaciones |
+  |---|---|---|
+  | **Alumnos** | DNI, nombre, apellido, email, curso | DNI y email únicos; email y curso obligatorios al dar de alta (opcionales al editar alumnos anteriores). La baja borra también su asistencia y su cuenta. |
+  | **Docentes** | DNI, nombre, apellido, email, materias | DNI y email únicos; al menos una materia. No se da de baja si está a cargo de un curso. Si hay una cuenta con su email, aparece "con cuenta". |
+  | **Cursos** | Nombre, año (1 a 7), división, docente a cargo | Sin cursos repetidos (nombre + año + división). No se da de baja si tiene alumnos; sus horarios se borran con él. |
+  | **Horarios** | Curso, día, hora de inicio y fin, materia | Fin posterior al inicio; **sin superposición** con otro bloque del mismo curso y día (pueden tocarse: 08:00–09:00 y 09:00–10:00). |
+
+  Docentes y administradores dan de alta y editan alumnos; solo el
+  administrador da de baja alumnos y modifica docentes, cursos y horarios
+  (el docente ve esos listados sin poder cambiarlos). Las materias se crean
+  solas al escribirlas en un docente o un horario.
 - **Registro por DNI**: se ingresa el DNI y el sistema guarda la hora y calcula el estado solo.
   - Hasta la hora límite (inclusive) → **PRESENTE**
   - Después de la hora límite → **TARDANZA**
@@ -39,13 +50,17 @@ asistencia-scm-practica1/
 ├── main.py                 # Módulo de consola original (v2.1.0)
 ├── asistencia/
 │   ├── bd.py               # Conexión a SQLite, esquema y transacciones
-│   ├── modelos.py          # Clases de datos: Usuario, Alumno, RegistroAsistencia
+│   ├── modelos.py          # Clases de datos: Usuario, Alumno, Docente, Curso, Horario...
 │   ├── validaciones.py     # Validación de DNI, nombres, emails, fechas, horas
 │   ├── seguridad.py        # Hash de contraseñas (scrypt)
 │   ├── migracion.py        # Lectura del JSON viejo e importación
 │   ├── servicios/          # Reglas del sistema
 │   │   ├── usuarios.py     # Cuentas y login
-│   │   ├── alumnos.py      # Alta, búsqueda y listado
+│   │   ├── alumnos.py      # ABM de alumnos
+│   │   ├── docentes.py     # ABM de docentes
+│   │   ├── materias.py     # Materias (se crean solas)
+│   │   ├── cursos.py       # ABM de cursos
+│   │   ├── horarios.py     # ABM de horarios y superposición
 │   │   ├── asistencias.py  # Registro, carga manual y cierre del día
 │   │   ├── configuracion.py# Hora límite
 │   │   └── informes.py     # Informe por alumno y dashboard
@@ -152,7 +167,12 @@ Todas se hacen **en el servidor** (`asistencia/validaciones.py` y `asistencia/se
 | Tabla | Contenido |
 |---|---|
 | `usuarios` | Cuentas: email (único), nombre, apellido, hash de la clave, rol (`administrador`, `docente` o `alumno`) y alumno vinculado |
-| `alumnos` | DNI (único), nombre y apellido |
+| `alumnos` | DNI (único), nombre, apellido, email (único) y curso |
+| `docentes` | DNI y email (únicos), nombre y apellido |
+| `materias` | Nombre (único, sin distinguir mayúsculas) |
+| `docente_materias` | Qué materias dicta cada docente |
+| `cursos` | Nombre, año, división y docente a cargo |
+| `horarios` | Curso, día (0 = lunes), hora de inicio y fin, materia |
 | `asistencias` | Alumno, fecha, estado, hora y si fue carga manual (un registro por alumno y fecha) |
 | `dias_cerrados` | Fechas cerradas |
 | `configuracion` | Opciones del sistema (hora límite) |
