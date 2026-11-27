@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block titulo %}Horarios{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Horarios</h1>
+    <p class="subtitulo">{{ horarios|length }} bloque{{ '' if horarios|length == 1 else 's' }} de clase{{ ' en este curso' if filtro_curso else '' }}</p>
+  </div>
+</section>
+
+<div class="grilla grilla-alumnos">
+  {% if usuario.es_administrador %}
+  <section class="tarjeta">
+    {% if editando %}
+      <span class="etiqueta-edicion">Editando</span>
+      <h2>Bloque del {{ editando.nombre_dia|lower }}</h2>
+    {% else %}
+      <h2>Agregar bloque</h2>
+    {% endif %}
+
+    {% if not cursos %}
+      <p class="vacio">Para cargar horarios primero tiene que existir un curso.
+        <a class="enlace" href="{{ url_for('cursos') }}">Ir a Cursos →</a></p>
+    {% else %}
+    <form method="post"
+          action="{{ url_for('modificar_horario', id=editando.id) if editando else url_for('alta_horario') }}"
+          class="form-columna">
+      <div class="campo">
+        <label for="curso_id">Curso</label>
+        <select id="curso_id" name="curso_id" required>
+          <option value="">Elegí un curso</option>
+          {% for c in cursos %}
+            <option value="{{ c.id }}" {{ 'selected' if formulario.get('curso_id', filtro_curso) == c.id|string else '' }}>{{ c.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="dia">Día</label>
+        <select id="dia" name="dia" required>
+          {% for nombre in dias %}
+            <option value="{{ loop.index0 }}" {{ 'selected' if formulario.get('dia') == loop.index0|string else '' }}>{{ nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-grilla">
+        <div class="campo">
+          <label for="hora_inicio">Desde</label>
+          <input id="hora_inicio" name="hora_inicio" type="time"
+                 value="{{ formulario.get('hora_inicio', '') }}" required>
+        </div>
+        <div class="campo">
+          <label for="hora_fin">Hasta</label>
+          <input id="hora_fin" name="hora_fin" type="time"
+                 value="{{ formulario.get('hora_fin', '') }}" required>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="materia">Materia</label>
+        <input id="materia" name="materia" type="text" maxlength="60" list="lista-materias"
+               value="{{ formulario.get('materia', '') }}" required>
+        <datalist id="lista-materias">
+          {% for m in materias %}<option value="{{ m }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="form-acciones">
+        <button type="submit" class="boton boton-principal">{{ 'Guardar cambios' if editando else 'Agregar' }}</button>
+        {% if editando %}
+          <a class="boton boton-secundario" href="{{ url_for('horarios') }}">Cancelar</a>
+        {% endif %}
+      </div>
+    </form>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <section class="tarjeta">
+    <h2>Listado</h2>
+    {% if cursos %}
+      <form method="get" action="{{ url_for('horarios') }}" class="filtro">
+        <label for="filtro-curso">Curso</label>
+        <select id="filtro-curso" name="curso">
+          <option value="">Todos</option>
+          {% for c in cursos %}
+            <option value="{{ c.id }}" {{ 'selected' if filtro_curso == c.id|string else '' }}>{{ c.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="boton boton-secundario boton-chico">Filtrar</button>
+      </form>
+    {% endif %}
+
+    {% if horarios %}
+      <div class="tabla-contenedor">
+        <table class="tabla">
+          <thead>
+            <tr><th>Curso</th><th>Día</th><th>Horario</th><th>Materia</th>{% if usuario.es_administrador %}<th></th>{% endif %}</tr>
+          </thead>
+          <tbody>
+            {% for h in horarios %}
+              <tr>
+                <td>{{ h.curso }}</td>
+                <td>{{ h.nombre_dia }}</td>
+                <td>{{ h.hora_inicio }} a {{ h.hora_fin }}</td>
+                <td>{{ h.materia }}</td>
+                {% if usuario.es_administrador %}
+                <td>
+                  <div class="acciones-fila">
+                    <a class="boton boton-secundario boton-chico" href="{{ url_for('horarios', editar=h.id) }}">Editar</a>
+                    <form method="post" action="{{ url_for('eliminar_horario', id=h.id) }}">
+                      <button type="submit" class="boton boton-peligro boton-chico"
+                              data-confirmar="¿Seguro? Tocá de nuevo">Quitar</button>
+                    </form>
+                  </div>
+                </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="vacio">Todavía no hay horarios{{ ' en este curso' if filtro_curso else '' }}.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

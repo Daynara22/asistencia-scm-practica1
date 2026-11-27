@@ -7,15 +7,15 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css', v=version_estaticos) }}">
 </head>
 <body class="{% block clase_body %}{% endblock %}">
-  {% if docente %}
+  {% if usuario %}
   <header class="cabecera-sitio">
     <div class="bienvenida">
       <div class="contenedor bienvenida-interior">
         <div class="saludo">
-          <span class="saludo-avatar" aria-hidden="true">{{ docente.nombre[:1] }}{{ docente.apellido[:1] }}</span>
+          <span class="saludo-avatar" aria-hidden="true">{{ usuario.nombre[:1] }}{{ usuario.apellido[:1] }}</span>
           <p class="saludo-texto">
-            <span class="saludo-titulo">Bienvenido docente</span>
-            <strong class="saludo-nombre">{{ docente.nombre }} {{ docente.apellido }}</strong>
+            <span class="saludo-titulo">Bienvenido {{ usuario.rol }}</span>
+            <strong class="saludo-nombre">{{ usuario.nombre }} {{ usuario.apellido }}</strong>
           </p>
         </div>
         <form method="post" action="{{ url_for('logout') }}">
@@ -33,10 +33,22 @@
           <span>Asistencia</span>
         </a>
         <nav class="menu" aria-label="Navegación principal">
+          {# Cada rol ve solo las pantallas a las que puede entrar. #}
+          {% if usuario.es_alumno %}
+          <a href="{{ url_for('mi_asistencia') }}" class="{{ 'activo' if seccion == 'mi_asistencia' else '' }}">Mi asistencia</a>
+          {% else %}
           <a href="{{ url_for('dashboard') }}" class="{{ 'activo' if seccion == 'dashboard' else '' }}">Dashboard</a>
           <a href="{{ url_for('asistencia') }}" class="{{ 'activo' if seccion == 'registro' else '' }}">Registrar asistencia</a>
           <a href="{{ url_for('alumnos') }}" class="{{ 'activo' if seccion == 'alumnos' else '' }}">Alumnos</a>
-          <a href="{{ url_for('informe') }}" class="{{ 'activo' if seccion == 'informe' else '' }}">Informe</a>
+          <a href="{{ url_for('docentes') }}" class="{{ 'activo' if seccion == 'docentes' else '' }}">Docentes</a>
+          <a href="{{ url_for('cursos') }}" class="{{ 'activo' if seccion == 'cursos' else '' }}">Cursos</a>
+          <a href="{{ url_for('horarios') }}" class="{{ 'activo' if seccion == 'horarios' else '' }}">Horarios</a>
+          <a href="{{ url_for('informe_total') }}" class="{{ 'activo' if seccion == 'informe' else '' }}">Informes</a>
+          <a href="{{ url_for('limites') }}" class="{{ 'activo' if seccion == 'limites' else '' }}">Límite de faltas</a>
+          {% endif %}
+          {% if usuario.es_administrador %}
+          <a href="{{ url_for('usuarios') }}" class="{{ 'activo' if seccion == 'usuarios' else '' }}">Usuarios</a>
+          {% endif %}
         </nav>
       </div>
     </div>

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block titulo %}Informes{% endblock %}
+
+{% macro barra(g) %}
+  {# Gráfico simple: una barra apilada con presentes, tardanzas y ausentes. #}
+  {% if g.total %}
+    <div class="barra-asistencia" role="img"
+         aria-label="Presentes {{ g.porcentaje_presentes }} %, tardanzas {{ g.porcentaje_tardanzas }} %, ausentes {{ g.porcentaje_ausentes }} %"
+         title="Presentes {{ g.porcentaje_presentes }} % · Tardanzas {{ g.porcentaje_tardanzas }} % · Ausentes {{ g.porcentaje_ausentes }} %">
+      <span class="tramo tramo-presente" style="width: {{ g.porcentaje_presentes }}%"></span>
+      <span class="tramo tramo-tardanza" style="width: {{ g.porcentaje_tardanzas }}%"></span>
+      <span class="tramo tramo-ausente" style="width: {{ g.porcentaje_ausentes }}%"></span>
+    </div>
+  {% else %}
+    <span class="texto-suave">Sin registros</span>
+  {% endif %}
+{% endmacro %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Informes</h1>
+    <p class="subtitulo">Resumen de asistencia general y por curso.
+      <a class="enlace" href="{{ url_for('informe') }}">Informe por alumno →</a></p>
+  </div>
+</section>
+
+<section class="tarjeta">
+  <form method="get" action="{{ url_for('informe_total') }}" class="form-linea filtro-informe">
+    <div class="campo">
+      <label for="desde">Desde</label>
+      <input id="desde" name="desde" type="date" value="{{ filtro.desde }}">
+    </div>
+    <div class="campo">
+      <label for="hasta">Hasta</label>
+      <input id="hasta" name="hasta" type="date" value="{{ filtro.hasta }}">
+    </div>
+    <div class="campo">
+      <label for="curso">Curso</label>
+      <select id="curso" name="curso">
+        <option value="">Todos</option>
+        {% for c in cursos %}
+          <option value="{{ c.id }}" {{ 'selected' if filtro.curso == c.id|string else '' }}>{{ c.nombre_completo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="boton boton-principal">Filtrar</button>
+    <a class="boton boton-secundario" href="{{ url_for('informe_total') }}">Limpiar</a>
+  </form>
+</section>
+
+{% if informe %}
+  {% set g = informe.general %}
+  <section class="tarjeta">
+    <div class="tarjeta-cabecera">
+      <h2>Resumen general</h2>
+      <div class="acciones-fila descargas">
+        <a class="boton boton-secundario boton-chico" href="{{ url_for('exportar_informe_total', formato='csv', **filtro) }}">Descargar CSV</a>
+        <a class="boton boton-secundario boton-chico" href="{{ url_for('exportar_informe_total', formato='pdf', **filtro) }}">Descargar PDF</a>
+      </div>
+    </div>
+    <p class="subtitulo">{{ informe.periodo }} · {{ informe.curso or 'Todos los cursos' }}</p>
+
+    <div class="contadores contadores-informe">
+      <div class="contador contador-total">
+        <span class="contador-numero">{{ g.alumnos }}</span>
+        <span class="contador-texto">Alumnos</span>
+      </div>
+      <div class="contador contador-presente">
+        <span class="contador-numero">{{ g.presentes }}</span>
+        <span class="contador-texto">Presentes · {{ g.porcentaje_presentes }} %</span>
+      </div>
+      <div class="contador contador-tardanza">
+        <span class="contador-numero">{{ g.tardanzas }}</span>
+        <span class="contador-texto">Tardanzas · {{ g.porcentaje_tardanzas }} %</span>
+      </div>
+      <div class="contador contador-ausente">
+        <span class="contador-numero">{{ g.ausentes }}</span>
+        <span class="contador-texto">Ausentes · {{ g.porcentaje_ausentes }} %</span>
+      </div>
+      <div class="contador contador-total">
+        <span class="contador-numero">{{ g.porcentaje_asistencia }} %</span>
+        <span class="contador-texto">Asistencia</span>
+      </div>
+      <div class="contador {{ 'contador-ausente' if g.superados else 'contador-tardanza' if g.cerca else 'contador-presente' }}">
+        <span class="contador-numero">{{ g.cerca + g.superados }}</span>
+        <span class="contador-texto">Con alerta de faltas</span>
+      </div>
+    </div>
+    {{ barra(g) }}
+    <p class="nota">
+      <span class="muestra muestra-presente"></span> Presentes
+      <span class="muestra muestra-tardanza"></span> Tardanzas
+      <span class="muestra muestra-ausente"></span> Ausentes ·
+      El porcentaje de asistencia cuenta presentes y tardanzas.
+    </p>
+  </section>
+
+  <section class="tarjeta">
+    <h2>Por curso</h2>
+    {% if informe.cursos %}
+      <div class="tabla-contenedor">
+        <table class="tabla" id="tabla-cursos">
+          <thead>
+            <tr><th>Curso</th><th>Alumnos</th><th>Presentes</th><th>Tardanzas</th><th>Ausentes</th><th>Asistencia</th><th>Alertas</th><th>Gráfico</th></tr>
+          </thead>
+          <tbody>
+            {% for c in informe.cursos %}
+              <tr>
+                <td>{% if c.id %}<a class="enlace" href="{{ url_for('informe_total', desde=filtro.desde, hasta=filtro.hasta, curso=c.id) }}">{{ c.nombre }}</a>{% else %}{{ c.nombre }}{% endif %}</td>
+                <td>{{ c.alumnos }}</td>
+                <td>{{ c.presentes }}</td>
+                <td>{{ c.tardanzas }}</td>
+                <td>{{ c.ausentes }}</td>
+                <td>{{ c.porcentaje_asistencia }} %</td>
+                <td>
+                  {% if c.superados %}<span class="badge badge-ausente">{{ c.superados }} superó</span>{% endif %}
+                  {% if c.cerca %}<span class="badge badge-tardanza">{{ c.cerca }} cerca</span>{% endif %}
+                  {% if not c.superados and not c.cerca %}—{% endif %}
+                </td>
+                <td class="barra-curso">{{ barra(c) }}</td>
+              </tr>
+            {% endfor %}
+            <tr class="fila-general">
+              <td>General</td><td>{{ g.alumnos }}</td><td>{{ g.presentes }}</td><td>{{ g.tardanzas }}</td>
+              <td>{{ g.ausentes }}</td><td>{{ g.porcentaje_asistencia }} %</td><td>{{ g.cerca + g.superados }}</td>
+              <td class="barra-curso">{{ barra(g) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="vacio">No hay alumnos para este filtro.</p>
+    {% endif %}
+  </section>
+
+  {% if informe.alumnos %}
+  <section class="tarjeta">
+    <h2>Por alumno</h2>
+    <div class="tabla-contenedor">
+      <table class="tabla" id="tabla-informe-alumnos">
+        <thead>
+          <tr><th>Alumno</th><th>Curso</th><th>P</th><th>T</th><th>A</th><th>Asistencia</th><th>Faltas</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for a in informe.alumnos %}
+            {% set s = a.situacion %}
+            <tr>
+              <td>{{ a.nombre }}</td>
+              <td>{{ a.curso }}</td>
+              <td>{{ a.presentes }}</td>
+              <td>{{ a.tardanzas }}</td>
+              <td>{{ a.ausentes }}</td>
+              <td>{{ a.porcentaje_asistencia }} %</td>
+              <td><span class="badge {{ 'badge-ausente' if s.estado == 'superado' else 'badge-tardanza' if s.estado == 'cerca' else 'badge-presente' }}"
+                        title="{{ s.mensaje or 'Dentro del límite' }}">{{ s.faltas_texto }} / {{ s.limite }}</span></td>
+              <td><a class="enlace" href="{{ url_for('informe', dni=a.dni, desde=filtro.desde, hasta=filtro.hasta) }}">Ver →</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="nota">P = presentes, T = tardanzas, A = ausentes en el período. Las faltas y el límite cuentan todo el ciclo.</p>
+  </section>
+  {% endif %}
+{% endif %}
+{% endblock %}

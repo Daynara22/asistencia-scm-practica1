@@ -1,3 +1,4 @@
+"""Tests del módulo de consola main.py."""
 import pytest
 
 import main
@@ -5,6 +6,7 @@ import main
 
 @pytest.fixture(autouse=True)
 def limpiar_estado():
+    """Deja el estado global de main en cero antes de cada test."""
     # Se modifica el estado a través del módulo (main.x) y no con
     # "from main import ...": total_asistencias es un int, así que importarlo
     # copiaría el valor y el reinicio no afectaría a la variable real de main.
@@ -13,8 +15,9 @@ def limpiar_estado():
 
 
 def test_registrar_asistencia_exitoso():
-    """Un DNI válido registra la asistencia y queda guardada en el historial."""
-    resultado = main.registrar_asistencia({"dni": "40123456", "materia": "Programación III"})
+    """Un DNI válido registra la asistencia y queda en el historial."""
+    resultado = main.registrar_asistencia(
+        {"dni": "40123456", "materia": "Programación III"})
 
     assert resultado is True
     assert main.total_asistencias == 1
@@ -25,7 +28,8 @@ def test_registrar_asistencia_exitoso():
 
 def test_registrar_asistencia_materia_personalizada():
     """La materia indicada en los datos del alumno se guarda en el registro."""
-    resultado = main.registrar_asistencia({"dni": "38999111", "materia": "Práctica Profesional II"})
+    resultado = main.registrar_asistencia(
+        {"dni": "38999111", "materia": "Práctica Profesional II"})
 
     assert resultado is True
     assert main.historial_registros[0]["materia"] == "Práctica Profesional II"
@@ -33,7 +37,8 @@ def test_registrar_asistencia_materia_personalizada():
 
 def test_registrar_asistencia_dni_invalido_corto():
     """Un DNI con menos de 7 dígitos se rechaza y no modifica el estado."""
-    resultado = main.registrar_asistencia({"dni": "123", "materia": "Programación III"})
+    resultado = main.registrar_asistencia(
+        {"dni": "123", "materia": "Programación III"})
 
     assert resultado is False
     assert main.total_asistencias == 0
@@ -42,7 +47,8 @@ def test_registrar_asistencia_dni_invalido_corto():
 
 def test_registrar_asistencia_dni_con_letras():
     """Un DNI que contiene letras se rechaza y no suma asistencias."""
-    resultado = main.registrar_asistencia({"dni": "40123ABC", "materia": "Programación III"})
+    resultado = main.registrar_asistencia(
+        {"dni": "40123ABC", "materia": "Programación III"})
 
     assert resultado is False
     assert main.total_asistencias == 0
@@ -58,8 +64,10 @@ def test_registrar_asistencia_sin_dni():
 
 def test_obtener_reporte_estadistico():
     """El reporte devuelve el total y el detalle de los registros en orden."""
-    main.registrar_asistencia({"dni": "40123456", "materia": "Programación III"})
-    main.registrar_asistencia({"dni": "41222333", "materia": "Práctica Profesional II"})
+    main.registrar_asistencia(
+        {"dni": "40123456", "materia": "Programación III"})
+    main.registrar_asistencia(
+        {"dni": "41222333", "materia": "Práctica Profesional II"})
 
     reporte = main.obtener_reporte_estadistico()
 

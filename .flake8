@@ -1,0 +1,11 @@
+[flake8]
+# Configuración de flake8 (verificación de PEP 8).
+max-line-length = 79
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .pytest_cache,
+    backups,
+    datos

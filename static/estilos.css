@@ -417,3 +417,26 @@ input:disabled { background: var(--fondo); cursor: not-allowed; }
   .saludo-nombre { font-size: 1.2rem; }
   .boton-salir { padding: .5rem .8rem; font-size: .88rem; }
 }
+
+/* ---------- ABM: acciones por fila y formularios en modo edición ---------- */
+.acciones-fila { display: flex; gap: .4rem; flex-wrap: wrap; align-items: center; }
+.acciones-fila form { margin: 0; }
+.boton-chico { padding: .35rem .7rem; font-size: .85rem; }
+.form-acciones { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.etiqueta-edicion {
+  display: inline-block; margin-bottom: .6rem; padding: .2rem .6rem; border-radius: 999px;
+  background: var(--principal-suave); color: var(--principal-oscuro); font-size: .85rem; font-weight: 600;
+}
+.filtro { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .8rem; }
+.texto-suave { color: var(--texto-suave); }
+
+/* ---------- Límite de faltas ---------- */
+.alerta-faltas { margin-bottom: 1rem; }
+
+/* ---------- Panel de informes ---------- */
+.filtro-informe { align-items: flex-end; flex-wrap: wrap; gap: .75rem; }
+.filtro-informe .campo { margin: 0; }
+.descargas { margin: .25rem 0 1rem; }
+.fila-general td { font-weight: 700; background: var(--principal-suave); }
+.barra-curso { min-width: 140px; }
+.barra-curso .barra-asistencia { margin: 0; height: 12px; }

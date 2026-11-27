@@ -5,14 +5,26 @@
 <section class="encabezado">
   <div>
     <h1>Alumnos</h1>
-    <p class="subtitulo">{{ alumnos|length }} alumno{{ '' if alumnos|length == 1 else 's' }} registrado{{ '' if alumnos|length == 1 else 's' }}</p>
+    <p class="subtitulo">{{ alumnos|length }} alumno{{ '' if alumnos|length == 1 else 's' }} registrado{{ '' if alumnos|length == 1 else 's' }}{{ ' en este curso' if filtro_curso else '' }}</p>
   </div>
 </section>
 
 <div class="grilla grilla-alumnos">
   <section class="tarjeta">
-    <h2>Alta de alumno</h2>
-    <form method="post" action="{{ url_for('alumnos') }}" class="form-columna">
+    {% if editando %}
+      <span class="etiqueta-edicion">Editando</span>
+      <h2>{{ editando.nombre }} {{ editando.apellido }}</h2>
+    {% else %}
+      <h2>Alta de alumno</h2>
+    {% endif %}
+
+    {% if not cursos and not editando %}
+      <p class="vacio">Para dar de alta alumnos primero tiene que existir un curso.
+        <a class="enlace" href="{{ url_for('cursos') }}">Ir a Cursos →</a></p>
+    {% else %}
+    <form method="post"
+          action="{{ url_for('modificar_alumno', id=editando.id) if editando else url_for('alta_alumno') }}"
+          class="form-columna">
       <div class="campo">
         <label for="dni">DNI</label>
         <input id="dni" name="dni" type="text" class="solo-numeros" inputmode="numeric"
@@ -29,8 +41,29 @@
         <input id="apellido" name="apellido" type="text" maxlength="50"
                value="{{ formulario.get('apellido', '') }}" required>
       </div>
-      <button type="submit" class="boton boton-principal boton-ancho">Dar de alta</button>
+      <div class="campo">
+        <label for="email">Email{{ ' (opcional)' if editando else '' }}</label>
+        <input id="email" name="email" type="email" maxlength="254"
+               value="{{ formulario.get('email', '') }}" autocomplete="off"
+               {{ '' if editando else 'required' }}>
+      </div>
+      <div class="campo">
+        <label for="curso_id">Curso{{ ' (opcional)' if editando else '' }}</label>
+        <select id="curso_id" name="curso_id" {{ '' if editando else 'required' }}>
+          <option value="">{{ 'Sin curso' if editando else 'Elegí un curso' }}</option>
+          {% for c in cursos %}
+            <option value="{{ c.id }}" {{ 'selected' if formulario.get('curso_id') == c.id|string else '' }}>{{ c.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-acciones">
+        <button type="submit" class="boton boton-principal">{{ 'Guardar cambios' if editando else 'Dar de alta' }}</button>
+        {% if editando %}
+          <a class="boton boton-secundario" href="{{ url_for('alumnos') }}">Cancelar</a>
+        {% endif %}
+      </div>
     </form>
+    {% endif %}
   </section>
 
   <section class="tarjeta">
@@ -42,11 +75,24 @@
       {% endif %}
     </div>
 
+    {% if cursos %}
+      <form method="get" action="{{ url_for('alumnos') }}" class="filtro">
+        <label for="filtro-curso">Curso</label>
+        <select id="filtro-curso" name="curso">
+          <option value="">Todos</option>
+          {% for c in cursos %}
+            <option value="{{ c.id }}" {{ 'selected' if filtro_curso == c.id|string else '' }}>{{ c.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="boton boton-secundario boton-chico">Filtrar</button>
+      </form>
+    {% endif %}
+
     {% if alumnos %}
       <div class="tabla-contenedor">
         <table class="tabla" id="tabla-alumnos">
           <thead>
-            <tr><th>Apellido</th><th>Nombre</th><th>DNI</th><th>Asistencia</th><th></th></tr>
+            <tr><th>Apellido</th><th>Nombre</th><th>DNI</th><th>Curso</th><th>Asistencia</th><th>Faltas</th><th></th></tr>
           </thead>
           <tbody>
             {% for a in alumnos %}
@@ -54,8 +100,25 @@
                 <td>{{ a.apellido }}</td>
                 <td>{{ a.nombre }}</td>
                 <td>{{ a.dni }}</td>
+                <td>{{ a.curso or '—' }}</td>
                 <td>{{ a.porcentaje if a.porcentaje is not none else '—' }}{{ ' %' if a.porcentaje is not none else '' }}</td>
-                <td><a class="enlace" href="{{ url_for('informe', dni=a.dni) }}">Ver informe →</a></td>
+                <td>
+                  {% set s = a.situacion %}
+                  <span class="badge {{ 'badge-ausente' if s.estado == 'superado' else 'badge-tardanza' if s.estado == 'cerca' else 'badge-presente' }}"
+                        title="{{ s.mensaje or 'Dentro del límite' }}">{{ s.faltas_texto }} / {{ s.limite }}</span>
+                </td>
+                <td>
+                  <div class="acciones-fila">
+                    <a class="enlace" href="{{ url_for('informe', dni=a.dni) }}">Ver informe →</a>
+                    <a class="boton boton-secundario boton-chico" href="{{ url_for('alumnos', editar=a.id) }}">Editar</a>
+                    {% if usuario.es_administrador %}
+                      <form method="post" action="{{ url_for('eliminar_alumno', id=a.id) }}">
+                        <button type="submit" class="boton boton-peligro boton-chico"
+                                data-confirmar="¿Seguro? Se borra su asistencia">Dar de baja</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </td>
               </tr>
             {% endfor %}
           </tbody>
@@ -63,7 +126,7 @@
       </div>
       <p class="vacio oculto" id="sin-resultados">No hay alumnos que coincidan con la búsqueda.</p>
     {% else %}
-      <p class="vacio">Todavía no hay alumnos. Cargá el primero con el formulario.</p>
+      <p class="vacio">Todavía no hay alumnos{{ ' en este curso' if filtro_curso else '' }}.</p>
     {% endif %}
   </section>
 </div>

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block titulo %}Usuarios{% endblock %}
+
+{% block contenido %}
+<section class="encabezado">
+  <div>
+    <h1>Usuarios</h1>
+    <p class="subtitulo">{{ cuentas|length }} cuenta{{ '' if cuentas|length == 1 else 's' }} · Solo los administradores ven esta pantalla.</p>
+  </div>
+</section>
+
+<div class="grilla grilla-alumnos">
+  <section class="tarjeta">
+    <h2>Cuenta de alumno</h2>
+    <p class="nota">El alumno podrá entrar con este email y ver solo su propia asistencia.</p>
+    {% if alumnos %}
+    <form method="post" action="{{ url_for('cuenta_alumno') }}" class="form-columna">
+      <div class="campo">
+        <label for="dni">Alumno</label>
+        <select id="dni" name="dni" required>
+          <option value="">Elegí un alumno</option>
+          {% for a in alumnos %}
+            <option value="{{ a.dni }}" {{ 'selected' if formulario.get('dni') == a.dni else '' }}>{{ a.apellido }}, {{ a.nombre }} ({{ a.dni }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" maxlength="254"
+               value="{{ formulario.get('email', '') }}" autocomplete="off" required>
+      </div>
+      <div class="campo">
+        <label for="clave">Contraseña inicial</label>
+        <input id="clave" name="clave" type="password" maxlength="128"
+               autocomplete="new-password" required>
+      </div>
+      <div class="campo">
+        <label for="clave_repetida">Repetir contraseña</label>
+        <input id="clave_repetida" name="clave_repetida" type="password" maxlength="128"
+               autocomplete="new-password" required>
+      </div>
+      <p class="nota">Mínimo 8 caracteres, con una letra, un número y un carácter especial.</p>
+      <button type="submit" class="boton boton-principal boton-ancho">Crear cuenta</button>
+    </form>
+    {% else %}
+      <p class="vacio">Primero dá de alta al alumno en la pantalla Alumnos.</p>
+    {% endif %}
+  </section>
+
+  <section class="tarjeta">
+    <h2>Cuentas</h2>
+    <div class="tabla-contenedor">
+      <table class="tabla">
+        <thead>
+          <tr><th>Nombre</th><th>Email</th><th>Rol</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for c in cuentas %}
+            <tr>
+              <td>{{ c.apellido }}, {{ c.nombre }}</td>
+              <td>{{ c.email }}</td>
+              <td>{{ c.nombre_rol }}{% if c.alumno_dni %} · DNI {{ c.alumno_dni }}{% endif %}</td>
+              <td>
+                {% if c.rol == 'docente' %}
+                  <form method="post" action="{{ url_for('cambiar_rol') }}">
+                    <input type="hidden" name="usuario_id" value="{{ c.id }}">
+                    <input type="hidden" name="rol" value="administrador">
+                    <button type="submit" class="boton boton-secundario">Hacer administrador</button>
+                  </form>
+                {% elif c.rol == 'administrador' %}
+                  <form method="post" action="{{ url_for('cambiar_rol') }}">
+                    <input type="hidden" name="usuario_id" value="{{ c.id }}">
+                    <input type="hidden" name="rol" value="docente">
+                    <button type="submit" class="boton boton-secundario">Pasar a docente</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
